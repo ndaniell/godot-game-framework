@@ -1,0 +1,302 @@
+#!/bin/bash
+
+# Godot Game Framework - Central management script
+# Note: set -e is not used globally to allow proper error handling in test command
+
+# Configuration
+GODOT_URL="https://downloads.godotengine.org/?version=4.5.1&flavor=stable&slug=linux.x86_64.zip&platform=linux.64"
+GODOT_DIR="godot"
+TEMP_ZIP="/tmp/godot_linux.zip"
+
+# Check if colors are supported
+if [ -t 1 ] && command -v tput > /dev/null 2>&1; then
+    # Terminal supports colors
+    RED=$(tput setaf 1)
+    GREEN=$(tput setaf 2)
+    YELLOW=$(tput setaf 3)
+    BLUE=$(tput setaf 4)
+    BOLD=$(tput bold)
+    NC=$(tput sgr0) # No Color
+else
+    # No color support
+    RED=''
+    GREEN=''
+    YELLOW=''
+    BLUE=''
+    BOLD=''
+    NC=''
+fi
+
+# Print help message
+show_help() {
+    echo "${BLUE}Godot Game Framework (ggf)${NC}"
+    echo
+    echo "A central script for managing your Godot game framework project."
+    echo
+    echo "${GREEN}Usage:${NC}"
+    echo "    ggf <command> [options]"
+    echo
+    echo "${GREEN}Commands:${NC}"
+    echo "    ${YELLOW}install${NC}           Download and install Godot engine"
+    echo "    ${YELLOW}test [--verbose]${NC}  Run framework tests (use --verbose to see all warnings)"
+    echo "    ${YELLOW}help${NC}              Show this help message"
+    echo
+    echo "${GREEN}Examples:${NC}"
+    echo "    ggf install          Install Godot 4.5.1"
+    echo "    ggf test             Run all framework tests"
+    echo "    ggf test --verbose   Run tests with verbose output (shows all warnings)"
+    echo "    ggf help             Show this help message"
+    echo
+    echo "${GREEN}For more information, visit:${NC} https://godotengine.org/"
+}
+
+# Install Godot engine
+cmd_install() {
+    set -e  # Enable strict error handling for install
+    echo "${BLUE}Installing Godot 4.5.1...${NC}"
+    
+    # Create godot directory if it doesn't exist
+    mkdir -p "$GODOT_DIR"
+    
+    # Check if already installed
+    if [ -f "$GODOT_DIR/Godot"* ] || [ -f "$GODOT_DIR/godot"* ]; then
+        echo "${YELLOW}Godot appears to already be installed in $GODOT_DIR/${NC}"
+        read -p "Do you want to reinstall? (y/N): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            echo "${GREEN}Installation cancelled.${NC}"
+            exit 0
+        fi
+        rm -rf "$GODOT_DIR"/*
+    fi
+    
+    # Download Godot
+    echo "${BLUE}Downloading Godot 4.5.1...${NC}"
+    if ! curl -L -o "$TEMP_ZIP" "$GODOT_URL"; then
+        echo "${RED}Error: Failed to download Godot${NC}"
+        exit 1
+    fi
+    
+    # Extract the zip file
+    echo "${BLUE}Extracting Godot...${NC}"
+    if ! unzip -q "$TEMP_ZIP" -d "$GODOT_DIR"; then
+        echo "${RED}Error: Failed to extract Godot${NC}"
+        rm -f "$TEMP_ZIP"
+        exit 1
+    fi
+    
+    # Find the executable in the extracted files
+    EXECUTABLE=$(find "$GODOT_DIR" -type f -name "Godot*" -executable | head -n 1)
+    
+    if [ -z "$EXECUTABLE" ]; then
+        # If no executable found, try to find any file named Godot*
+        EXECUTABLE=$(find "$GODOT_DIR" -type f -name "Godot*" | head -n 1)
+        if [ -n "$EXECUTABLE" ]; then
+            chmod +x "$EXECUTABLE"
+        fi
+    fi
+    
+    # If executable is in a subdirectory, move it to the godot root
+    if [ -n "$EXECUTABLE" ]; then
+        EXECUTABLE_DIR=$(dirname "$EXECUTABLE")
+        GODOT_DIR_ABS=$(realpath "$GODOT_DIR")
+        EXECUTABLE_DIR_ABS=$(realpath "$EXECUTABLE_DIR")
+        
+        # Only move if the executable is in a subdirectory (not already in godot root)
+        if [ "$EXECUTABLE_DIR_ABS" != "$GODOT_DIR_ABS" ]; then
+            echo "${BLUE}Moving executable to $GODOT_DIR/...${NC}"
+            mv "$EXECUTABLE" "$GODOT_DIR/"
+            # Update EXECUTABLE path after move
+            EXECUTABLE="$GODOT_DIR/$(basename "$EXECUTABLE")"
+            # Clean up empty subdirectories
+            find "$GODOT_DIR" -type d -empty -delete
+        fi
+    fi
+    
+    # Clean up temporary zip file
+    rm -f "$TEMP_ZIP"
+    
+    # Verify installation
+    if [ -n "$EXECUTABLE" ]; then
+        EXECUTABLE_NAME=$(basename "$EXECUTABLE")
+        if [ -f "$GODOT_DIR/$EXECUTABLE_NAME" ]; then
+            echo "${GREEN}✓ Godot has been successfully installed!${NC}"
+            echo "${GREEN}  Location: $GODOT_DIR/$EXECUTABLE_NAME${NC}"
+        else
+            echo "${YELLOW}⚠ Installation completed, but executable location may vary${NC}"
+        fi
+    else
+        echo "${RED}Error: Could not find Godot executable after extraction${NC}"
+        exit 1
+    fi
+}
+
+# Find Godot executable
+find_godot_executable() {
+    # Check common locations
+    if [ -f "$GODOT_DIR/Godot_v4.5.1-stable_linux.x86_64" ]; then
+        echo "$GODOT_DIR/Godot_v4.5.1-stable_linux.x86_64"
+        return 0
+    fi
+    
+    # Try to find any Godot executable in the godot directory
+    local executable=$(find "$GODOT_DIR" -type f -name "Godot*" -executable 2>/dev/null | head -n 1)
+    if [ -n "$executable" ]; then
+        echo "$executable"
+        return 0
+    fi
+    
+    # Try system Godot
+    if command -v godot > /dev/null 2>&1; then
+        echo "godot"
+        return 0
+    fi
+    
+    return 1
+}
+
+# Run tests
+cmd_test() {
+    # Don't use set -e here, we need to capture exit codes
+    local VERBOSE=false
+    
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --verbose|-v)
+                VERBOSE=true
+                shift
+                ;;
+            *)
+                echo "${YELLOW}Unknown option: $1${NC}"
+                echo "Use 'ggf test --verbose' to see all warnings"
+                shift
+                ;;
+        esac
+    done
+    
+    echo "${BLUE}Running framework tests...${NC}"
+    
+    # Find Godot executable
+    GODOT_EXEC=$(find_godot_executable)
+    local find_exit=$?
+    if [ $find_exit -ne 0 ] || [ -z "$GODOT_EXEC" ]; then
+        echo "${RED}Error: Could not find Godot executable${NC}"
+        echo "${YELLOW}Please install Godot first using: ggf install${NC}"
+        exit 1
+    fi
+    
+    # Check if project.godot exists
+    if [ ! -f "project.godot" ]; then
+        echo "${RED}Error: project.godot not found${NC}"
+        echo "${YELLOW}Please run this command from the framework root directory${NC}"
+        exit 1
+    fi
+    
+    # Create a test runner script that will execute tests
+    TEST_SCRIPT="/tmp/ggf_test_runner.gd"
+    cat > "$TEST_SCRIPT" << 'EOF'
+extends SceneTree
+
+func _initialize():
+    # Wait for managers to initialize
+    # When extending SceneTree, we are the tree, so use 'self' or direct calls
+    await process_frame
+    await process_frame
+    
+    # Load and run test runner
+    var test_runner_script = load("res://scripts/test/TestRunner.gd")
+    if test_runner_script == null:
+        print("ERROR: Could not load TestRunner.gd")
+        quit(1)
+        return
+    
+    var test_runner = test_runner_script.new()
+    root.add_child(test_runner)
+    
+    # Clear script reference after creating instance to help with cleanup
+    # (Script resources are cached by ResourceLoader, but clearing our reference helps)
+    test_runner_script = null
+    
+    # Tests run automatically if auto_run_on_ready is true
+    # TestRunner will quit itself when tests complete via call_deferred
+    # Wait for quit to happen - use a simple loop instead of timer to avoid leak
+    # TestRunner should quit quickly, but we'll wait up to 30 seconds as safety
+    var max_wait = 30.0
+    var elapsed = 0.0
+    var delta = 1.0 / 60.0  # Approximate frame time
+    
+    while elapsed < max_wait:
+        await process_frame
+        elapsed += delta
+        # Check if quit was requested (we can't easily check this, so just wait)
+        # TestRunner will call quit() which will exit the loop
+    
+    # If we reach here, something went wrong - clean up and force quit
+    if is_instance_valid(test_runner):
+        root.remove_child(test_runner)
+        test_runner.free()
+        await process_frame
+    quit(1)
+EOF
+    
+    echo "${BLUE}Executing tests with Godot (headless mode)...${NC}"
+    if [ "$VERBOSE" = true ]; then
+        echo "${YELLOW}Verbose mode: All warnings and errors will be shown${NC}"
+        # Run with --verbose flag for extra details
+        "$GODOT_EXEC" --headless --verbose --script "$TEST_SCRIPT" 2>&1
+    else
+        echo "${YELLOW}Note: Test output will appear below${NC}"
+        # Run normally - warnings/errors will show if there are actual issues
+        "$GODOT_EXEC" --headless --script "$TEST_SCRIPT" 2>&1
+    fi
+    TEST_EXIT_CODE=$?
+    
+    # Clean up
+    rm -f "$TEST_SCRIPT"
+    
+    echo
+    
+    if [ $TEST_EXIT_CODE -eq 0 ]; then
+        echo "${GREEN}✓ Tests completed!${NC}"
+        echo "${GREEN}Check the output above for test results.${NC}"
+        exit 0
+    else
+        echo "${RED}✗ Tests failed or encountered errors (exit code: $TEST_EXIT_CODE)${NC}"
+        exit $TEST_EXIT_CODE
+    fi
+}
+
+# Main command dispatcher
+main() {
+    # If no arguments provided, show help
+    if [ $# -eq 0 ]; then
+        show_help
+        exit 0
+    fi
+    
+    # Parse command
+    COMMAND="$1"
+    shift
+    
+    case "$COMMAND" in
+        install)
+            cmd_install "$@"
+            ;;
+        test)
+            cmd_test "$@"
+            ;;
+        help|--help|-h)
+            show_help
+            ;;
+        *)
+            echo "${RED}Error: Unknown command '$COMMAND'${NC}"
+            echo
+            show_help
+            exit 1
+            ;;
+    esac
+}
+
+# Run main function with all arguments
+main "$@"

@@ -1,0 +1,30 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="Godot Game Framework"
+config/features=PackedStringArray("4.5", "Forward Plus")
+config/icon="res://icon.svg"
+
+[autoload]
+
+AudioManager="*res://scripts/autoload/AudioManager.gd"
+GameManager="*res://scripts/autoload/GameManager.gd"
+SaveManager="*res://scripts/autoload/SaveManager.gd"
+InputManager="*res://scripts/autoload/InputManager.gd"
+SceneManager="*res://scripts/autoload/SceneManager.gd"
+UIManager="*res://scripts/autoload/UIManager.gd"
+SettingsManager="*res://scripts/autoload/SettingsManager.gd"
+EventManager="*res://scripts/autoload/EventManager.gd"
+ResourceManager="*res://scripts/autoload/ResourceManager.gd"
+PoolManager="*res://scripts/autoload/PoolManager.gd"
+TimeManager="*res://scripts/autoload/TimeManager.gd"
+NotificationManager="*res://scripts/autoload/NotificationManager.gd"
