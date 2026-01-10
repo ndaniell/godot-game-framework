@@ -4,35 +4,37 @@ extends Node
 ##
 ## This manager handles game state, scene transitions, and game lifecycle.
 ## Extend this class to add custom game management functionality.
+##
+## States are defined in states.json and can be extended without modifying code.
 
 signal game_state_changed(old_state: String, new_state: String)
 signal scene_changed(scene_path: String)
 signal game_paused(is_paused: bool)
 signal game_quit()
 
-# Game states enum - extend this in your game
-enum GameState {
-	MENU,
-	PLAYING,
-	PAUSED,
-	GAME_OVER,
-	VICTORY,
-	LOADING
-}
+# State machine configuration
+@export_group("State Machine Configuration")
+@export var states_config_path: String = "res://resources/data/game_states.tres"
 
-# Current game state
-var current_state: GameState = GameState.MENU:
+# State machine configuration resource
+var _state_config: GameStateMachineConfig = null
+var _default_state: String = "MENU"
+
+# Current game state (string-based, loaded from configuration)
+var current_state: String = "":
 	set(value):
-		var state_keys := GameState.keys()
-		var old_state_name: String = state_keys[current_state]
-		var new_state_name: String = state_keys[value]
+		if current_state == value:
+			return
+		var old_state_name: String = current_state
 		current_state = value
-		game_state_changed.emit(old_state_name, new_state_name)
-		_on_state_changed(old_state_name, new_state_name)
+		game_state_changed.emit(old_state_name, current_state)
+		_on_state_changed(old_state_name, current_state)
 
 # Pause state
 var is_paused: bool = false:
 	set(value):
+		if is_paused == value:
+			return
 		is_paused = value
 		get_tree().paused = value
 		game_paused.emit(value)
@@ -56,37 +58,126 @@ func _ready() -> void:
 ## Initialize game systems
 ## Override this method to customize initialization
 func _initialize_game() -> void:
+	# Load state machine configuration
+	_load_state_definitions()
 	# Connect to scene tree signals
 	get_tree().node_added.connect(_on_node_added)
 	get_tree().node_removed.connect(_on_node_removed)
 
+## Load state definitions from Resource file
+## Override this method to customize state loading
+func _load_state_definitions() -> void:
+	if states_config_path.is_empty():
+		push_error("GameManager: States config path is empty. Cannot initialize state machine.")
+		return
+	
+	if not ResourceLoader.exists(states_config_path):
+		push_error("GameManager: States config resource not found: " + states_config_path + ". Cannot initialize state machine.")
+		return
+	
+	# Load the state machine configuration resource
+	var config_resource: GameStateMachineConfig = null
+	var load_result = ResourceLoader.load(states_config_path) as GameStateMachineConfig
+	if load_result == null:
+		push_error("GameManager: Failed to load states config resource: " + states_config_path + ". Cannot initialize state machine.")
+		return
+	config_resource = load_result
+	
+	# Check if it's the right type (has the methods we need)
+	if not config_resource.has_method("validate") or not config_resource.has_method("get_state") or not config_resource.has_method("has_state"):
+		push_error("GameManager: Loaded resource is not a valid GameStateMachineConfig. Cannot initialize state machine.")
+		return
+	
+	# Validate the configuration
+	if not config_resource.validate():
+		push_error("GameManager: State machine configuration validation failed. Cannot initialize state machine.")
+		return
+	
+	_state_config = config_resource
+	if config_resource.has_method("get") and config_resource.get("default_state") != null:
+		_default_state = config_resource.get("default_state")
+	else:
+		_default_state = "MENU"
+	
+	# Set initial state
+	if current_state.is_empty():
+		current_state = _default_state
+		# Trigger initial state transition to call entry callbacks and apply properties
+		_handle_state_transition("", _default_state)
+
 ## Change game state
 ## Override this method to add custom state change logic
-func change_state(new_state: GameState) -> void:
+## @param new_state: String name of the new state (must be defined in state machine config)
+func change_state(new_state: String) -> void:
 	if current_state == new_state:
 		return
 	
+	if _state_config == null:
+		push_error("GameManager: State machine configuration not loaded")
+		return
+	
+	# Validate state exists
+	if not _state_config.has_method("has_state") or not _state_config.has_state(new_state):
+		push_error("GameManager: Attempted to change to invalid state: " + new_state)
+		return
+	
+	# Validate transition is allowed
+	var current_state_def: GameStateDefinition = _state_config.get_state(current_state)
+	if current_state_def != null:
+		var allowed_transitions_val = current_state_def.get("allowed_transitions")
+		# Convert to Array[String] - handle both Array and PackedStringArray
+		var allowed_transitions: Array[String] = []
+		if allowed_transitions_val is Array:
+			for item in allowed_transitions_val:
+				if item is String:
+					allowed_transitions.append(item)
+		elif allowed_transitions_val is PackedStringArray:
+			for item in allowed_transitions_val:
+				allowed_transitions.append(item)
+		if not allowed_transitions.is_empty() and not allowed_transitions.has(new_state):
+			push_warning("GameManager: Transition from '" + current_state + "' to '" + new_state + "' is not allowed")
+			return
+	
 	var old_state := current_state
 	current_state = new_state
+	# Handle state transition immediately (synchronous)
 	_handle_state_transition(old_state, new_state)
 
 ## Handle state transition
 ## Override this method to customize state transitions
-func _handle_state_transition(old_state: GameState, new_state: GameState) -> void:
-	match new_state:
-		GameState.PAUSED:
-			pause_game()
-		GameState.PLAYING:
-			if old_state == GameState.PAUSED:
-				unpause_game()
-		GameState.GAME_OVER:
-			_on_game_over()
-		GameState.VICTORY:
-			_on_victory()
-		GameState.MENU:
-			_on_menu_entered()
-		GameState.LOADING:
-			_on_loading_started()
+func _handle_state_transition(old_state: String, new_state: String) -> void:
+	if _state_config == null:
+		return
+	
+	var new_state_def: GameStateDefinition = _state_config.get_state(new_state)
+	var old_state_def: GameStateDefinition = _state_config.get_state(old_state)
+	
+	if new_state_def == null:
+		return
+	
+	# Call exit callback for old state
+	if old_state_def != null:
+		var exit_callback_val = old_state_def.get("exit_callback")
+		var exit_callback: String = exit_callback_val if exit_callback_val is String else ""
+		if not exit_callback.is_empty():
+			_call_state_callback(exit_callback, old_state)
+	
+	# Call entry callback for new state
+	# Entry callbacks handle state-specific behavior (e.g., pausing in PAUSED state)
+	var entry_callback_val = new_state_def.get("entry_callback")
+	var entry_callback: String = entry_callback_val if entry_callback_val is String else ""
+	if not entry_callback.is_empty():
+		_call_state_callback(entry_callback, new_state)
+
+## Call a state callback method by name
+func _call_state_callback(callback_name: String, state_name: String) -> void:
+	if callback_name.is_empty():
+		return
+	
+	if has_method(callback_name):
+		call(callback_name)
+	else:
+		push_warning("GameManager: State callback method '" + callback_name + "' not found for state '" + state_name + "'")
 
 ## Pause the game
 ## Override this method to add custom pause logic
@@ -94,7 +185,7 @@ func pause_game() -> void:
 	if is_paused:
 		return
 	is_paused = true
-	change_state(GameState.PAUSED)
+	change_state("PAUSED")
 
 ## Unpause the game
 ## Override this method to add custom unpause logic
@@ -102,7 +193,7 @@ func unpause_game() -> void:
 	if not is_paused:
 		return
 	is_paused = false
-	change_state(GameState.PLAYING)
+	change_state("PLAYING")
 
 ## Toggle pause state
 func toggle_pause() -> void:
@@ -226,6 +317,16 @@ func _on_menu_entered() -> void:
 func _on_loading_started() -> void:
 	pass
 
+## Called when paused state is entered
+## Override to handle pause logic
+func _on_paused_entered() -> void:
+	is_paused = true
+
+## Called when paused state is exited
+## Override to handle unpause logic
+func _on_paused_exited() -> void:
+	is_paused = false
+
 ## Called when game is quitting
 ## Override to add cleanup logic
 func _on_game_quit() -> void:
@@ -258,8 +359,60 @@ func _notify_time_manager_pause(paused: bool) -> void:
 
 ## Get current state name as string
 func get_state_name() -> String:
-	return GameState.keys()[current_state]
+	return current_state
 
 ## Check if game is in a specific state
-func is_in_state(state: GameState) -> bool:
+## @param state: String name of the state to check
+func is_in_state(state: String) -> bool:
 	return current_state == state
+
+## Get state definition for a given state
+## @param state_name: String name of the state
+## @return: GameStateDefinition resource, or null if not found
+func get_state_definition(state_name: String) -> GameStateDefinition:
+	if _state_config == null:
+		return null
+	return _state_config.get_state(state_name)
+
+## Get all available state names
+## @return: Array of state name strings
+func get_all_states() -> Array:
+	if _state_config == null:
+		return []
+	return _state_config.get_state_names()
+
+## Check if a transition is allowed from current state to target state
+## @param target_state: String name of the target state
+## @return: bool indicating if transition is allowed
+func can_transition_to(target_state: String) -> bool:
+	if _state_config == null:
+		return false
+	
+	if not _state_config.has_state(target_state):
+		return false
+	
+	var current_state_def: GameStateDefinition = _state_config.get_state(current_state)
+	if current_state_def == null:
+		return false
+	
+	var allowed_transitions_val = current_state_def.get("allowed_transitions")
+	# Convert to Array[String] - handle both Array and PackedStringArray
+	var allowed_transitions: Array[String] = []
+	if allowed_transitions_val is Array:
+		for item in allowed_transitions_val:
+			if item is String:
+				allowed_transitions.append(item)
+	elif allowed_transitions_val is PackedStringArray:
+		for item in allowed_transitions_val:
+			allowed_transitions.append(item)
+	
+	# If allowed_transitions is empty, allow all transitions
+	if allowed_transitions.is_empty():
+		return true
+	
+	return allowed_transitions.has(target_state)
+
+## Reload state definitions from file
+## Useful for hot-reloading during development
+func reload_state_definitions() -> void:
+	_load_state_definitions()

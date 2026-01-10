@@ -44,7 +44,7 @@ All managers are available globally as autoload singletons:
 AudioManager.play_music(my_music_stream)
 
 # Change game state
-GameManager.change_state(GameManager.GameState.PLAYING)
+GameManager.change_state("PLAYING")
 
 # Save game
 SaveManager.save_game(0, {"level": 5, "score": 1000})
@@ -71,112 +71,52 @@ func _on_music_started(stream: AudioStream) -> void:
 
 ## Manager Overview
 
-### AudioManager
-Handles all audio playback including music, sound effects, and volume control.
+### Core Managers
+
+- **[AudioManager](docs/AudioManager.md)** - Music, sound effects, and volume control
+- **[GameManager](docs/GameManager.md)** - Game state management, pause, and lifecycle
+- **[SaveManager](docs/SaveManager.md)** - Save/load system with multiple slots
+- **[InputManager](docs/InputManager.md)** - Input handling, remapping, and device detection
+- **[SceneManager](docs/SceneManager.md)** - Scene loading, transitions, and caching
+- **[UIManager](docs/UIManager.md)** - UI elements, menus, dialogs, and focus management
+
+### System Managers
+
+- **[EventManager](docs/EventManager.md)** - Global event bus (pub/sub pattern)
+- **[SettingsManager](docs/SettingsManager.md)** - Graphics, audio, and gameplay settings
+- **[ResourceManager](docs/ResourceManager.md)** - Resource loading, caching, and pooling
+- **[PoolManager](docs/PoolManager.md)** - Object pooling for performance
+
+### Utility Managers
+
+- **[TimeManager](docs/TimeManager.md)** - Time scaling, timers, and day/night cycles
+- **[NotificationManager](docs/NotificationManager.md)** - Toast notifications and system messages
+
+### Quick Examples
 
 ```gdscript
+# Audio
 AudioManager.play_music(music_stream, fade_in=true)
 AudioManager.play_sfx(sfx_stream)
-AudioManager.set_master_volume(0.8)
-```
 
-### GameManager
-Manages game state, pause functionality, and scene transitions.
-
-```gdscript
-GameManager.change_state(GameManager.GameState.PLAYING)
+# Game State
+GameManager.change_state("PLAYING")
 GameManager.pause_game()
-GameManager.change_scene("res://scenes/level2.tscn")
-```
 
-### SaveManager
-Provides save/load functionality with multiple save slots.
-
-```gdscript
+# Save/Load
 SaveManager.save_game(0, {"level": 5})
 SaveManager.load_game(0)
-SaveManager.delete_save(1)
-```
 
-### InputManager
-Handles input actions, remapping, and device detection.
-
-```gdscript
-if InputManager.is_action_just_pressed("jump"):
-    jump()
-    
-InputManager.remap_action("jump", new_key_event)
-```
-
-### SceneManager
-Manages scene loading, unloading, and transitions.
-
-```gdscript
-SceneManager.load_scene("res://scenes/menu.tscn")
-SceneManager.change_scene("res://scenes/level1.tscn", "fade")
-SceneManager.preload_scene("res://scenes/level2.tscn")
-```
-
-### UIManager
-Handles UI elements, menus, dialogs, and focus management.
-
-```gdscript
-UIManager.register_ui_element("main_menu", menu_ui)
-UIManager.open_menu("main_menu")
-UIManager.set_focus(button_node)
-```
-
-### SettingsManager
-Manages game settings including graphics, audio, and gameplay.
-
-```gdscript
-SettingsManager.set_setting("graphics", "fullscreen", true)
-SettingsManager.set_setting("audio", "master_volume", 0.8)
-SettingsManager.save_settings()
-```
-
-### EventManager
-Global event bus for decoupled communication between systems.
-
-```gdscript
+# Events
 EventManager.subscribe("player_died", _on_player_died)
 EventManager.emit("player_died", {"score": 1000})
-```
 
-### ResourceManager
-Handles resource loading, caching, and memory management.
-
-```gdscript
-var texture = ResourceManager.load_resource("res://textures/player.png")
-ResourceManager.preload_resource("res://scenes/level1.tscn")
-```
-
-### PoolManager
-Object pooling system for improved performance.
-
-```gdscript
-PoolManager.create_pool("bullets", bullet_prefab, 20)
-var bullet = PoolManager.spawn("bullets", position)
-PoolManager.despawn("bullets", bullet)
-```
-
-### TimeManager
-Time scaling, timers, and time-based mechanics.
-
-```gdscript
-TimeManager.slow_motion(0.5, 2.0)  # 50% speed for 2 seconds
-TimeManager.create_timer("powerup", 10.0, false)
-TimeManager.set_time_scale(2.0)  # Fast forward
-```
-
-### NotificationManager
-Toast notifications and system messages.
-
-```gdscript
+# UI
+UIManager.open_menu("main_menu")
 NotificationManager.show_success("Level Complete!")
-NotificationManager.show_error("Connection failed", 5.0)
-NotificationManager.show_info("New item collected")
 ```
+
+For detailed documentation on each manager, see the **[docs/](docs/)** folder.
 
 ## Integration
 
@@ -259,10 +199,14 @@ To run tests:
 2. Run the scene (F5)
 3. View test results in the output console
 
-## Support
+## Documentation
 
-For detailed usage examples, see [USAGE.md](USAGE.md).
+For detailed information on each manager, see the **[docs/](docs/)** folder.
 
-For API reference, see [API.md](API.md).
-
-For testing documentation, see [TESTING.md](TESTING.md).
+Each manager has comprehensive documentation including:
+- Overview and features
+- Properties and configuration
+- Complete API reference
+- Usage examples
+- Best practices
+- Integration guides

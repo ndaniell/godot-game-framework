@@ -220,7 +220,7 @@ func reset_action(action: String) -> bool:
 
 ## Restore default action mapping
 ## Override this method to restore default input mappings
-func _restore_default_action(action: String) -> void:
+func _restore_default_action(_action: String) -> void:
 	# Override to implement default action restoration
 	pass
 

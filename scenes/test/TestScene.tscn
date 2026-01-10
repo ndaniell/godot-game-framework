@@ -4,5 +4,3 @@
 
 [node name="TestScene" type="Node"]
 script = ExtResource("1_test_runner")
-
-[node name="TestRunner" parent="." instance=ExtResource("1_test_runner")]

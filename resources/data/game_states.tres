@@ -1,0 +1,53 @@
+[gd_resource type="Resource" script_class="GameStateMachineConfig" load_steps=9 format=3 uid="uid://bfpkgw3d3hv0a"]
+
+[ext_resource type="Script" uid="uid://b0hdetmrqkr0j" path="res://scripts/types/GameStateMachineConfig.gd" id="1_main"]
+[ext_resource type="Script" uid="uid://b8uduwrn0n1sy" path="res://scripts/types/GameStateDefinition.gd" id="2_states"]
+
+[sub_resource type="Resource" id="SubResource_4"]
+script = ExtResource("2_states")
+name = "GAME_OVER"
+entry_callback = "_on_game_over"
+metadata/_custom_type_script = "uid://b8uduwrn0n1sy"
+
+[sub_resource type="Resource" id="SubResource_6"]
+script = ExtResource("2_states")
+name = "LOADING"
+entry_callback = "_on_loading_started"
+metadata/_custom_type_script = "uid://b8uduwrn0n1sy"
+
+[sub_resource type="Resource" id="SubResource_1"]
+script = ExtResource("2_states")
+name = "MENU"
+entry_callback = "_on_menu_entered"
+metadata/_custom_type_script = "uid://b8uduwrn0n1sy"
+
+[sub_resource type="Resource" id="SubResource_3"]
+script = ExtResource("2_states")
+name = "PAUSED"
+entry_callback = "_on_paused_entered"
+exit_callback = "_on_paused_exited"
+metadata/_custom_type_script = "uid://b8uduwrn0n1sy"
+
+[sub_resource type="Resource" id="SubResource_2"]
+script = ExtResource("2_states")
+name = "PLAYING"
+metadata/_custom_type_script = "uid://b8uduwrn0n1sy"
+
+[sub_resource type="Resource" id="SubResource_5"]
+script = ExtResource("2_states")
+name = "VICTORY"
+entry_callback = "_on_victory"
+metadata/_custom_type_script = "uid://b8uduwrn0n1sy"
+
+[resource]
+script = ExtResource("1_main")
+default_state = "MENU"
+states = {
+"GAME_OVER": SubResource("SubResource_4"),
+"LOADING": SubResource("SubResource_6"),
+"MENU": SubResource("SubResource_1"),
+"PAUSED": SubResource("SubResource_3"),
+"PLAYING": SubResource("SubResource_2"),
+"VICTORY": SubResource("SubResource_5")
+}
+metadata/_custom_type_script = "uid://b0hdetmrqkr0j"

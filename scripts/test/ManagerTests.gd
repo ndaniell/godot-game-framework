@@ -173,7 +173,7 @@ func _get_game_manager_test_names() -> Array:
 		{"name": "GameManager exists", "method": "test_gamemanager_exists"},
 		{"name": "State changes work", "method": "test_game_state_changes"},
 		{"name": "Pause functionality", "method": "test_game_pause_functionality"},
-		{"name": "State enum values", "method": "test_game_state_enum"}
+		{"name": "State definitions loaded", "method": "test_game_state_definitions"}
 	]
 
 
@@ -185,11 +185,11 @@ func test_gamemanager_exists() -> bool:
 
 func test_game_state_changes() -> bool:
 	var original = GameManager.current_state
-	GameManager.change_state(GameManager.GameState.PLAYING)
+	GameManager.change_state("PLAYING")
 	var framework = _get_framework()
 	if framework == null:
 		return false
-	var result: bool = framework.assert_equal(GameManager.current_state, GameManager.GameState.PLAYING)
+	var result: bool = framework.assert_equal(GameManager.current_state, "PLAYING")
 	GameManager.change_state(original)
 	return result
 
@@ -197,20 +197,57 @@ func test_game_pause_functionality() -> bool:
 	var framework = _get_framework()
 	if framework == null:
 		return false
+	
+	# Ensure we're in a state that allows pausing (PLAYING allows transition to PAUSED)
+	var original_state = GameManager.current_state
+	if GameManager.current_state != "PLAYING":
+		GameManager.change_state("PLAYING")
+	
+	# Ensure we're not already paused
 	var was_paused: bool = GameManager.is_paused
-	GameManager.pause_game()
-	var result1: bool = framework.assert_true(GameManager.is_paused, "Game should be paused")
-	GameManager.unpause_game()
-	var result2: bool = framework.assert_false(GameManager.is_paused, "Game should be unpaused")
 	if was_paused:
-		GameManager.pause_game()
+		# If already paused, unpause first
+		GameManager.unpause_game()
+		# Verify we're unpaused
+		if GameManager.is_paused:
+			return framework.assert_false(true, "Failed to unpause before pause test")
+	
+	# Verify we're in PLAYING state and not paused before testing
+	if GameManager.current_state != "PLAYING":
+		return framework.assert_false(true, "Precondition failed: not in PLAYING state")
+	if GameManager.is_paused:
+		return framework.assert_false(true, "Precondition failed: already paused")
+	
+	# Test pause - directly transitions to PAUSED state, entry callback sets is_paused
+	GameManager.pause_game()
+	# State transition should happen immediately and synchronously
+	# Verify state changed to PAUSED
+	if GameManager.current_state != "PAUSED":
+		return framework.assert_false(true, "State should be PAUSED after pause_game(), got: " + GameManager.current_state)
+	# Verify is_paused is true
+	var result1: bool = framework.assert_true(GameManager.is_paused, "Game should be paused after pause_game()")
+	
+	# Test unpause - directly transitions to PLAYING state, exit callback unsets is_paused
+	GameManager.unpause_game()
+	# State transition should happen immediately and synchronously
+	# Verify state changed to PLAYING
+	if GameManager.current_state != "PLAYING":
+		return framework.assert_false(true, "State should be PLAYING after unpause_game(), got: " + GameManager.current_state)
+	# Verify is_paused is false
+	var result2: bool = framework.assert_false(GameManager.is_paused, "Game should be unpaused after unpause_game()")
+	
+	# Restore original state if needed
+	if original_state != "PLAYING" and original_state != GameManager.current_state:
+		GameManager.change_state(original_state)
+	
 	return result1 and result2
 
-func test_game_state_enum() -> bool:
+func test_game_state_definitions() -> bool:
 	var framework = _get_framework()
 	if framework == null:
 		return false
-	return framework.assert_not_null(GameManager.GameState, "GameState enum should exist")
+	var all_states: Array = GameManager.get_all_states()
+	return framework.assert_true(all_states.size() > 0, "State definitions should be loaded")
 
 # ============================================================================
 # SaveManager Tests
