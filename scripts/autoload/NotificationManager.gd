@@ -107,9 +107,9 @@ func hide_notification(notification_id: String) -> bool:
 	if not _notifications.has(notification_id):
 		return false
 	
-	var notification := _notifications[notification_id] as Dictionary
-	var node := notification["node"] as Control
-	var timer := notification["timer"] as Timer
+	var notification_data := _notifications[notification_id] as Dictionary
+	var node := notification_data["node"] as Control
+	var timer := notification_data["timer"] as Timer
 	
 	# Stop timer
 	if is_instance_valid(timer):
@@ -163,42 +163,42 @@ func _create_notification_node(message: String, type: NotificationType, data: Di
 
 ## Set notification style based on type
 ## Override this method to customize styling
-func _set_notification_style(panel: Panel, type: NotificationType) -> void:
+func _set_notification_style(_panel: Panel, _type: NotificationType) -> void:
 	# Override to set custom styles
 	# This is a placeholder - implement actual styling
 	pass
 
 ## Position notification
-func _position_notification(notification: Control, index: int) -> void:
-	var offset_y := index * (notification.custom_minimum_size.y + notification_spacing)
+func _position_notification(notification_panel: Control, index: int) -> void:
+	var offset_y := index * (notification_panel.custom_minimum_size.y + notification_spacing)
 	
 	if alignment.y == 0:  # Top
-		notification.position = position + Vector2(0, offset_y)
+		notification_panel.position = position + Vector2(0, offset_y)
 	else:  # Bottom
 		var screen_size := get_viewport().get_visible_rect().size
-		notification.position = Vector2(position.x, screen_size.y - position.y - notification.custom_minimum_size.y - offset_y)
+		notification_panel.position = Vector2(position.x, screen_size.y - position.y - notification_panel.custom_minimum_size.y - offset_y)
 	
 	if alignment.x == 1:  # Right
 		var screen_size := get_viewport().get_visible_rect().size
-		notification.position.x = screen_size.x - position.x - notification.custom_minimum_size.x
+		notification_panel.position.x = screen_size.x - position.x - notification_panel.custom_minimum_size.x
 
 ## Animate notification in
 ## Override this method to customize animation
-func _animate_notification_in(notification: Control) -> void:
+func _animate_notification_in(notification_panel: Control) -> void:
 	# Simple fade/slide in
-	notification.modulate.a = 0.0
-	notification.position.x -= 50.0
+	notification_panel.modulate.a = 0.0
+	notification_panel.position.x -= 50.0
 	
 	var tween := create_tween()
-	tween.parallel().tween_property(notification, "modulate:a", 1.0, 0.3)
-	tween.parallel().tween_property(notification, "position:x", notification.position.x + 50.0, 0.3)
+	tween.parallel().tween_property(notification_panel, "modulate:a", 1.0, 0.3)
+	tween.parallel().tween_property(notification_panel, "position:x", notification_panel.position.x + 50.0, 0.3)
 
 ## Animate notification out
 ## Override this method to customize animation
-func _animate_notification_out(notification: Control, notification_id: String) -> void:
+func _animate_notification_out(notification_panel: Control, notification_id: String) -> void:
 	var tween := create_tween()
-	tween.parallel().tween_property(notification, "modulate:a", 0.0, 0.3)
-	tween.parallel().tween_property(notification, "position:x", notification.position.x - 50.0, 0.3)
+	tween.parallel().tween_property(notification_panel, "modulate:a", 0.0, 0.3)
+	tween.parallel().tween_property(notification_panel, "position:x", notification_panel.position.x - 50.0, 0.3)
 	
 	await tween.finished
 	
@@ -213,8 +213,8 @@ func _remove_notification(notification_id: String) -> void:
 	if not _notifications.has(notification_id):
 		return
 	
-	var notification := _notifications[notification_id] as Dictionary
-	var node := notification["node"] as Control
+	var notification_data := _notifications[notification_id] as Dictionary
+	var node := notification_data["node"] as Control
 	
 	if is_instance_valid(node):
 		node.queue_free()
@@ -231,8 +231,8 @@ func _remove_notification(notification_id: String) -> void:
 func _reposition_notifications() -> void:
 	var index := 0
 	for notification_id in _notifications.keys():
-		var notification := _notifications[notification_id] as Dictionary
-		var node := notification["node"] as Control
+		var notification_data := _notifications[notification_id] as Dictionary
+		var node := notification_data["node"] as Control
 		_position_notification(node, index)
 		index += 1
 
@@ -262,8 +262,8 @@ func _on_notification_timer_timeout(notification_id: String) -> void:
 func _handle_notification_clicked(event: InputEvent, notification_id: String) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		if _notifications.has(notification_id):
-			var notification := _notifications[notification_id] as Dictionary
-			var data := notification["data"] as Dictionary
+			var notification_data := _notifications[notification_id] as Dictionary
+			var data := notification_data["data"] as Dictionary
 			
 			if data.has("on_click"):
 				var callback := data["on_click"] as Callable
@@ -308,17 +308,17 @@ func _on_notification_manager_ready() -> void:
 
 ## Called when a notification is shown
 ## Override to handle notification showing
-func _on_notification_shown(notification_id: String, message: String, type: NotificationType, data: Dictionary) -> void:
+func _on_notification_shown(_notification_id: String, _message: String, _type: NotificationType, _data: Dictionary) -> void:
 	pass
 
 ## Called when a notification is hidden
 ## Override to handle notification hiding
-func _on_notification_hidden(notification_id: String) -> void:
+func _on_notification_hidden(_notification_id: String) -> void:
 	pass
 
 ## Called when a notification is clicked
 ## Override to handle notification clicks
-func _on_notification_clicked(notification_id: String, data: Dictionary) -> void:
+func _on_notification_clicked(_notification_id: String, _data: Dictionary) -> void:
 	pass
 
 ## Called when all notifications are hidden

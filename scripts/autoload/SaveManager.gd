@@ -257,12 +257,12 @@ func _apply_save_data(data: Dictionary) -> void:
 
 ## Apply player data
 ## Override this method to apply player-specific data
-func _apply_player_data(player_data: Dictionary) -> void:
+func _apply_player_data(_player_data: Dictionary) -> void:
 	pass
 
 ## Apply world data
 ## Override this method to apply world-specific data
-func _apply_world_data(world_data: Dictionary) -> void:
+func _apply_world_data(_world_data: Dictionary) -> void:
 	pass
 
 ## Called when auto-save timer times out
@@ -279,17 +279,17 @@ func _on_save_manager_ready() -> void:
 
 ## Called when game is saved
 ## Override to add post-save logic
-func _on_game_saved(slot: int, data: Dictionary) -> void:
+func _on_game_saved(_slot: int, _data: Dictionary) -> void:
 	pass
 
 ## Called when game is loaded
 ## Override to add post-load logic
-func _on_game_loaded(slot: int, data: Dictionary) -> void:
+func _on_game_loaded(_slot: int, _data: Dictionary) -> void:
 	pass
 
 ## Called when save is deleted
 ## Override to add post-delete logic
-func _on_save_deleted(slot: int) -> void:
+func _on_save_deleted(_slot: int) -> void:
 	pass
 
 ## Get current save data

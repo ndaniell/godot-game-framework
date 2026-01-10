@@ -14,15 +14,9 @@ extends RefCounted
 @warning_ignore("unused_variable")
 var test_framework: Node
 
-## Helper to get test framework - handles cases where it might not be set
+## Helper to get test framework
 func _get_framework() -> Node:
-	if test_framework != null:
-		return test_framework
-	# Try to get it as a property
-	var framework = get("test_framework")
-	if framework is Node:
-		return framework as Node
-	return null
+	return test_framework
 
 ## Register all manager tests with the registry
 func register_tests(registry: RefCounted) -> void:
@@ -47,10 +41,18 @@ func register_tests(registry: RefCounted) -> void:
 	var notification_tests = _create_test_callables(_get_notification_manager_test_names())
 	
 	# Verify Callables are valid before registering
-	for test_name in audio_tests:
-		var callable = audio_tests[test_name]
-		if not (callable is Callable) or not (callable as Callable).is_valid():
-			push_error("ManagerTests: Invalid Callable for " + test_name + " (type: " + str(typeof(callable)) + ")")
+	_validate_test_suite("AudioManager", audio_tests)
+	_validate_test_suite("GameManager", game_tests)
+	_validate_test_suite("SaveManager", save_tests)
+	_validate_test_suite("InputManager", input_tests)
+	_validate_test_suite("SceneManager", scene_tests)
+	_validate_test_suite("UIManager", ui_tests)
+	_validate_test_suite("SettingsManager", settings_tests)
+	_validate_test_suite("EventManager", event_tests)
+	_validate_test_suite("ResourceManager", resource_tests)
+	_validate_test_suite("PoolManager", pool_tests)
+	_validate_test_suite("TimeManager", time_tests)
+	_validate_test_suite("NotificationManager", notification_tests)
 	
 	# Register with source object so Callables can be recreated
 	registry.register_suite("AudioManager", audio_tests, Callable(), Callable(), self)
@@ -65,6 +67,13 @@ func register_tests(registry: RefCounted) -> void:
 	registry.register_suite("PoolManager", pool_tests, Callable(), Callable(), self)
 	registry.register_suite("TimeManager", time_tests, Callable(), Callable(), self)
 	registry.register_suite("NotificationManager", notification_tests, Callable(), Callable(), self)
+
+## Helper to validate a test suite's Callables
+func _validate_test_suite(suite_name: String, tests: Dictionary) -> void:
+	for test_name in tests:
+		var callable = tests[test_name]
+		if not (callable is Callable) or not (callable as Callable).is_valid():
+			push_error("ManagerTests: Invalid Callable for " + suite_name + "." + test_name + " (type: " + str(typeof(callable)) + ")")
 
 ## Helper to create Callables from test definitions
 ## test_defs is an Array of either:
@@ -105,9 +114,6 @@ func _get_audio_manager_test_names() -> Array:
 		{"name": "SFX volume property", "method": "test_audio_sfx_volume"}
 	]
 
-func _get_audio_manager_tests() -> Dictionary:
-	# Legacy method - kept for compatibility
-	return _create_test_callables(_get_audio_manager_test_names())
 
 func test_audiomanager_exists() -> bool:
 	var framework = _get_framework()
@@ -170,8 +176,6 @@ func _get_game_manager_test_names() -> Array:
 		{"name": "State enum values", "method": "test_game_state_enum"}
 	]
 
-func _get_game_manager_tests() -> Dictionary:
-	return _create_test_callables(_get_game_manager_test_names())
 
 func test_gamemanager_exists() -> bool:
 	var framework = _get_framework()
@@ -219,8 +223,6 @@ func _get_save_manager_test_names() -> Array:
 		{"name": "Save slot operations", "method": "test_save_slot_operations"}
 	]
 
-func _get_save_manager_tests() -> Dictionary:
-	return _create_test_callables(_get_save_manager_test_names())
 
 func test_savemanager_exists() -> bool:
 	var framework = _get_framework()
@@ -263,8 +265,6 @@ func _get_input_manager_test_names() -> Array:
 		{"name": "Input mode", "method": "test_input_mode"}
 	]
 
-func _get_input_manager_tests() -> Dictionary:
-	return _create_test_callables(_get_input_manager_test_names())
 
 func test_inputmanager_exists() -> bool:
 	var framework = _get_framework()
@@ -295,8 +295,6 @@ func _get_scene_manager_test_names() -> Array:
 		{"name": "Scene path tracking", "method": "test_scene_path_tracking"}
 	]
 
-func _get_scene_manager_tests() -> Dictionary:
-	return _create_test_callables(_get_scene_manager_test_names())
 
 func test_scenemanager_exists() -> bool:
 	var framework = _get_framework()
@@ -319,8 +317,6 @@ func _get_ui_manager_test_names() -> Array:
 		{"name": "UI layer configuration", "method": "test_ui_layers"}
 	]
 
-func _get_ui_manager_tests() -> Dictionary:
-	return _create_test_callables(_get_ui_manager_test_names())
 
 func test_uimanager_exists() -> bool:
 	var framework = _get_framework()
@@ -345,8 +341,6 @@ func _get_settings_manager_test_names() -> Array:
 		{"name": "Settings retrieval", "method": "test_settings_retrieval"}
 	]
 
-func _get_settings_manager_tests() -> Dictionary:
-	return _create_test_callables(_get_settings_manager_test_names())
 
 func test_settingsmanager_exists() -> bool:
 	var framework = _get_framework()
@@ -384,8 +378,6 @@ func _get_event_manager_test_names() -> Array:
 		{"name": "Event unsubscription", "method": "test_event_unsubscription"}
 	]
 
-func _get_event_manager_tests() -> Dictionary:
-	return _create_test_callables(_get_event_manager_test_names())
 
 func test_eventmanager_exists() -> bool:
 	var framework = _get_framework()
@@ -440,8 +432,6 @@ func _get_resource_manager_test_names() -> Array:
 		{"name": "Cache management", "method": "test_resource_cache"}
 	]
 
-func _get_resource_manager_tests() -> Dictionary:
-	return _create_test_callables(_get_resource_manager_test_names())
 
 func test_resourcemanager_exists() -> bool:
 	var framework = _get_framework()
@@ -466,8 +456,6 @@ func _get_pool_manager_test_names() -> Array:
 		{"name": "Pool operations", "method": "test_pool_operations"}
 	]
 
-func _get_pool_manager_tests() -> Dictionary:
-	return _create_test_callables(_get_pool_manager_test_names())
 
 func test_poolmanager_exists() -> bool:
 	var framework = _get_framework()
@@ -493,8 +481,6 @@ func _get_time_manager_test_names() -> Array:
 		{"name": "Timer creation", "method": "test_timer_creation"}
 	]
 
-func _get_time_manager_tests() -> Dictionary:
-	return _create_test_callables(_get_time_manager_test_names())
 
 func test_timemanager_exists() -> bool:
 	var framework = _get_framework()
@@ -533,8 +519,6 @@ func _get_notification_manager_test_names() -> Array:
 		{"name": "Notification display", "method": "test_notification_display"}
 	]
 
-func _get_notification_manager_tests() -> Dictionary:
-	return _create_test_callables(_get_notification_manager_test_names())
 
 func test_notificationmanager_exists() -> bool:
 	var framework = _get_framework()

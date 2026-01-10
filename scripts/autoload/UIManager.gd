@@ -52,50 +52,50 @@ func _initialize_ui_manager() -> void:
 
 ## Register a UI element
 ## Override this method to add custom registration logic
-func register_ui_element(name: String, element: Control, layer: int = -1) -> void:
-	if name.is_empty():
+func register_ui_element(element_name: String, element: Control, z_layer: int = -1) -> void:
+	if element_name.is_empty():
 		push_error("UIManager: Cannot register UI element with empty name")
 		return
 	
 	if element == null:
-		push_error("UIManager: Cannot register null UI element: " + name)
+		push_error("UIManager: Cannot register null UI element: " + element_name)
 		return
 	
 	# Set layer if specified
-	if layer >= 0:
-		element.z_index = layer
+	if z_layer >= 0:
+		element.z_index = z_layer
 	
 	# Store element
-	_ui_elements[name] = element
+	_ui_elements[element_name] = element
 	
 	# Add to scene tree if not already
 	if not element.get_parent():
 		add_child(element)
 	
-	_on_ui_element_registered(name, element)
+	_on_ui_element_registered(element_name, element)
 
 ## Unregister a UI element
-func unregister_ui_element(name: String) -> void:
-	if not _ui_elements.has(name):
+func unregister_ui_element(element_name: String) -> void:
+	if not _ui_elements.has(element_name):
 		return
 	
-	var element := _ui_elements[name] as Control
-	_ui_elements.erase(name)
+	var element := _ui_elements[element_name] as Control
+	_ui_elements.erase(element_name)
 	
 	# Remove from focus if it's the current focus
 	if _current_focus == element:
 		_current_focus = null
 	
-	_on_ui_element_unregistered(name, element)
+	_on_ui_element_unregistered(element_name, element)
 
 ## Show a UI element
 ## Override this method to add custom show logic
-func show_ui_element(name: String, fade_in: bool = false) -> void:
-	if not _ui_elements.has(name):
-		push_warning("UIManager: UI element not registered: " + name)
+func show_ui_element(element_name: String, fade_in: bool = false) -> void:
+	if not _ui_elements.has(element_name):
+		push_warning("UIManager: UI element not registered: " + element_name)
 		return
 	
-	var element := _ui_elements[name] as Control
+	var element := _ui_elements[element_name] as Control
 	if element.visible:
 		return
 	
@@ -106,17 +106,17 @@ func show_ui_element(name: String, fade_in: bool = false) -> void:
 		var tween := create_tween()
 		tween.tween_property(element, "modulate:a", 1.0, 0.3)
 	
-	ui_element_shown.emit(name)
-	_on_ui_element_shown(name, element)
+	ui_element_shown.emit(element_name)
+	_on_ui_element_shown(element_name, element)
 
 ## Hide a UI element
 ## Override this method to add custom hide logic
-func hide_ui_element(name: String, fade_out: bool = false) -> void:
-	if not _ui_elements.has(name):
-		push_warning("UIManager: UI element not registered: " + name)
+func hide_ui_element(element_name: String, fade_out: bool = false) -> void:
+	if not _ui_elements.has(element_name):
+		push_warning("UIManager: UI element not registered: " + element_name)
 		return
 	
-	var element := _ui_elements[name] as Control
+	var element := _ui_elements[element_name] as Control
 	if not element.visible:
 		return
 	
@@ -129,19 +129,19 @@ func hide_ui_element(name: String, fade_out: bool = false) -> void:
 	else:
 		element.visible = false
 	
-	ui_element_hidden.emit(name)
-	_on_ui_element_hidden(name, element)
+	ui_element_hidden.emit(element_name)
+	_on_ui_element_hidden(element_name, element)
 
 ## Toggle UI element visibility
-func toggle_ui_element(name: String) -> void:
-	if not _ui_elements.has(name):
+func toggle_ui_element(element_name: String) -> void:
+	if not _ui_elements.has(element_name):
 		return
 	
-	var element := _ui_elements[name] as Control
+	var element := _ui_elements[element_name] as Control
 	if element.visible:
-		hide_ui_element(name)
+		hide_ui_element(element_name)
 	else:
-		show_ui_element(name)
+		show_ui_element(element_name)
 
 ## Open a menu
 ## Override this method to add custom menu opening logic
@@ -276,16 +276,16 @@ func clear_focus() -> void:
 		_on_focus_changed(old_focus, null)
 
 ## Get a registered UI element
-func get_ui_element(name: String) -> Control:
-	if not _ui_elements.has(name):
+func get_ui_element(element_name: String) -> Control:
+	if not _ui_elements.has(element_name):
 		return null
-	return _ui_elements[name] as Control
+	return _ui_elements[element_name] as Control
 
 ## Check if a UI element is visible
-func is_ui_element_visible(name: String) -> bool:
-	if not _ui_elements.has(name):
+func is_ui_element_visible(element_name: String) -> bool:
+	if not _ui_elements.has(element_name):
 		return false
-	return (_ui_elements[name] as Control).visible
+	return (_ui_elements[element_name] as Control).visible
 
 ## Check if a menu is open
 func is_menu_open(menu_name: String) -> bool:
@@ -316,50 +316,50 @@ func _on_ui_manager_ready() -> void:
 
 ## Called when a UI element is registered
 ## Override to handle element registration
-func _on_ui_element_registered(name: String, element: Control) -> void:
+func _on_ui_element_registered(_name: String, _element: Control) -> void:
 	pass
 
 ## Called when a UI element is unregistered
 ## Override to handle element unregistration
-func _on_ui_element_unregistered(name: String, element: Control) -> void:
+func _on_ui_element_unregistered(_name: String, _element: Control) -> void:
 	pass
 
 ## Called when a UI element is shown
 ## Override to handle element showing
-func _on_ui_element_shown(name: String, element: Control) -> void:
+func _on_ui_element_shown(_name: String, _element: Control) -> void:
 	pass
 
 ## Called when a UI element is hidden
 ## Override to handle element hiding
-func _on_ui_element_hidden(name: String, element: Control) -> void:
+func _on_ui_element_hidden(_name: String, _element: Control) -> void:
 	pass
 
 ## Called when a menu is opened
 ## Override to handle menu opening
-func _on_menu_opened(menu_name: String) -> void:
+func _on_menu_opened(_menu_name: String) -> void:
 	pass
 
 ## Called when a menu is closed
 ## Override to handle menu closing
-func _on_menu_closed(menu_name: String) -> void:
+func _on_menu_closed(_menu_name: String) -> void:
 	pass
 
 ## Called when menu focus is restored
 ## Override to handle focus restoration
-func _on_menu_focus_restored(menu_name: String) -> void:
+func _on_menu_focus_restored(_menu_name: String) -> void:
 	pass
 
 ## Called when a dialog is opened
 ## Override to handle dialog opening
-func _on_dialog_opened(dialog_name: String) -> void:
+func _on_dialog_opened(_dialog_name: String) -> void:
 	pass
 
 ## Called when a dialog is closed
 ## Override to handle dialog closing
-func _on_dialog_closed(dialog_name: String) -> void:
+func _on_dialog_closed(_dialog_name: String) -> void:
 	pass
 
 ## Called when focus changes
 ## Override to handle focus changes
-func _on_focus_changed(old_element: Control, new_element: Control) -> void:
+func _on_focus_changed(_old_element: Control, _new_element: Control) -> void:
 	pass

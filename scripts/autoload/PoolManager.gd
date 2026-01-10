@@ -208,7 +208,7 @@ func _reset_object(obj: Node) -> void:
 
 ## Initialize object when added to pool
 ## Override this method to customize object initialization
-func _initialize_object(obj: Node) -> void:
+func _initialize_object(_obj: Node) -> void:
 	# Override to initialize object properties
 	pass
 
@@ -303,27 +303,27 @@ func _on_pool_manager_ready() -> void:
 
 ## Called when a pool is created
 ## Override to handle pool creation
-func _on_pool_created(pool_name: String, size: int) -> void:
+func _on_pool_created(_pool_name: String, _size: int) -> void:
 	pass
 
 ## Called when an object is spawned
 ## Override to handle object spawning
-func _on_object_spawned(pool_name: String, obj: Node) -> void:
+func _on_object_spawned(_pool_name: String, _obj: Node) -> void:
 	pass
 
 ## Called when an object is despawned
 ## Override to handle object despawning
-func _on_object_despawned(pool_name: String, obj: Node) -> void:
+func _on_object_despawned(_pool_name: String, _obj: Node) -> void:
 	pass
 
 ## Called when a pool is cleared
 ## Override to handle pool clearing
-func _on_pool_cleared(pool_name: String) -> void:
+func _on_pool_cleared(_pool_name: String) -> void:
 	pass
 
 ## Called when a pool is removed
 ## Override to handle pool removal
-func _on_pool_removed(pool_name: String) -> void:
+func _on_pool_removed(_pool_name: String) -> void:
 	pass
 
 ## Called when all pools are cleared

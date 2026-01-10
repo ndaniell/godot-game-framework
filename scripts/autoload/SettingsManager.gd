@@ -177,18 +177,13 @@ func _apply_settings() -> void:
 			vsync_mode = graphics["vsync_mode"]
 		if graphics.has("resolution"):
 			var res_value = graphics["resolution"]
-			# Convert from JSON array [x, y] or string to Vector2i
+			# Convert from JSON array [x, y] to Vector2i
 			if res_value is Array:
 				var res_array = res_value as Array
 				if res_array.size() >= 2:
 					resolution = Vector2i(res_array[0], res_array[1])
 			elif res_value is Vector2i:
 				resolution = res_value
-			elif res_value is String:
-				# Try to parse "1920x1080" or "1920,1080"
-				var parts = res_value.split_floats("x" if "x" in res_value else ",")
-				if parts.size() >= 2:
-					resolution = Vector2i(int(parts[0]), int(parts[1]))
 		if graphics.has("window_mode"):
 			window_mode = graphics["window_mode"]
 	
@@ -375,7 +370,7 @@ func _on_settings_saved() -> void:
 
 ## Called when a setting changes
 ## Override to handle setting changes
-func _on_setting_changed(category: String, key: String, value: Variant) -> void:
+func _on_setting_changed(_category: String, _key: String, _value: Variant) -> void:
 	pass
 
 ## Called when settings are reset

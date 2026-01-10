@@ -186,17 +186,17 @@ func _on_event_manager_ready() -> void:
 
 ## Called when an event is emitted
 ## Override to handle event emission
-func _on_event_emitted(event_name: String, data: Dictionary) -> void:
+func _on_event_emitted(_event_name: String, _data: Dictionary) -> void:
 	pass
 
 ## Called when a listener is added
 ## Override to handle listener addition
-func _on_listener_added(event_name: String, callable: Callable) -> void:
+func _on_listener_added(_event_name: String, _callable: Callable) -> void:
 	pass
 
 ## Called when a listener is removed
 ## Override to handle listener removal
-func _on_listener_removed(event_name: String, callable: Callable) -> void:
+func _on_listener_removed(_event_name: String, _callable: Callable) -> void:
 	pass
 
 ## Called when all listeners are cleared

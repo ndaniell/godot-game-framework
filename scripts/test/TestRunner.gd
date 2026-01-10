@@ -89,7 +89,7 @@ func run_all_tests() -> Dictionary:
 
 func _quit_tree() -> void:
 	# Clean up resources before quitting
-	await _cleanup_resources()
+	_cleanup_resources()
 	
 	# Get tree reference before we might remove ourselves
 	var tree = get_tree()

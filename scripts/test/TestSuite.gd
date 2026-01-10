@@ -53,7 +53,7 @@ func run() -> Dictionary:
 	for test_name in tests:
 		setup_test()
 		var test_func := tests[test_name] as Callable
-		var passed := test_framework.run_test(suite_name + "::" + test_name, test_func)
+		var passed: bool = test_framework.run_test(suite_name + "::" + test_name, test_func)
 		results[test_name] = passed
 		teardown_test()
 	

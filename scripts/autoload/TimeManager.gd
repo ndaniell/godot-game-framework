@@ -105,7 +105,7 @@ func _update_timers(delta: float) -> void:
 			timer["elapsed"] = elapsed
 
 ## Update day/night cycle
-func _update_day_night_cycle(delta: float) -> void:
+func _update_day_night_cycle(_delta: float) -> void:
 	if not enable_day_night_cycle:
 		return
 	
@@ -302,12 +302,12 @@ func _on_time_manager_ready() -> void:
 
 ## Called when time scale changes
 ## Override to handle time scale changes
-func _on_time_scale_changed(old_scale: float, new_scale: float) -> void:
+func _on_time_scale_changed(_old_scale: float, _new_scale: float) -> void:
 	pass
 
 ## Called when a timer is created
 ## Override to handle timer creation
-func _on_timer_created(timer_id: String, duration: float, loop: bool) -> void:
+func _on_timer_created(_timer_id: String, _duration: float, _loop: bool) -> void:
 	pass
 
 ## Called when a timer completes
@@ -321,27 +321,27 @@ func _on_timer_completed(timer_id: String) -> void:
 
 ## Called when a timer is removed
 ## Override to handle timer removal
-func _on_timer_removed(timer_id: String) -> void:
+func _on_timer_removed(_timer_id: String) -> void:
 	pass
 
 ## Called when a timer is paused
 ## Override to handle timer pause
-func _on_timer_paused(timer_id: String) -> void:
+func _on_timer_paused(_timer_id: String) -> void:
 	pass
 
 ## Called when a timer is resumed
 ## Override to handle timer resume
-func _on_timer_resumed(timer_id: String) -> void:
+func _on_timer_resumed(_timer_id: String) -> void:
 	pass
 
 ## Called when a timer is reset
 ## Override to handle timer reset
-func _on_timer_reset(timer_id: String) -> void:
+func _on_timer_reset(_timer_id: String) -> void:
 	pass
 
 ## Called when day/night changes
 ## Override to handle day/night changes
-func _on_day_night_changed(is_day: bool) -> void:
+func _on_day_night_changed(_is_day_time: bool) -> void:
 	pass
 
 ## Handle game pause event from EventManager

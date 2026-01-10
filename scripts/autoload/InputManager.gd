@@ -31,9 +31,6 @@ var current_input_mode: InputMode = InputMode.AUTO:
 var _input_remaps: Dictionary = {}
 var _remap_file_path: String = "user://input_remaps.save"
 
-# Input action cache for performance
-var _action_cache: Dictionary = {}
-
 ## Initialize the input manager
 ## Override this method to add custom initialization
 func _ready() -> void:
@@ -328,20 +325,20 @@ func _dict_to_event(dict: Dictionary) -> InputEvent:
 	match event_type:
 		"InputEventKey":
 			var key_event := InputEventKey.new()
-			key_event.keycode = dict.get("keycode", 0) as int
-			key_event.physical_keycode = dict.get("physical_keycode", 0) as int
+			key_event.keycode = dict.get("keycode", 0) as Key
+			key_event.physical_keycode = dict.get("physical_keycode", 0) as Key
 			event = key_event
 		"InputEventMouseButton":
 			var mouse_event := InputEventMouseButton.new()
-			mouse_event.button_index = dict.get("button_index", 0) as int
+			mouse_event.button_index = dict.get("button_index", 0) as MouseButton
 			event = mouse_event
 		"InputEventJoypadButton":
 			var joypad_event := InputEventJoypadButton.new()
-			joypad_event.button_index = dict.get("button_index", 0) as int
+			joypad_event.button_index = dict.get("button_index", 0) as JoyButton
 			event = joypad_event
 		"InputEventJoypadMotion":
 			var motion_event := InputEventJoypadMotion.new()
-			motion_event.axis = dict.get("axis", 0) as int
+			motion_event.axis = dict.get("axis", 0) as JoyAxis
 			motion_event.axis_value = dict.get("axis_value", 0.0) as float
 			event = motion_event
 	
@@ -388,32 +385,32 @@ func _on_input_manager_ready() -> void:
 
 ## Called when input mode changes
 ## Override to handle input mode changes
-func _on_input_mode_changed(mode: InputMode) -> void:
+func _on_input_mode_changed(_mode: InputMode) -> void:
 	pass
 
 ## Called when an action is pressed
 ## Override to handle action press
-func _on_action_pressed(action: String) -> void:
+func _on_action_pressed(_action: String) -> void:
 	pass
 
 ## Called when an action is just pressed
 ## Override to handle action just pressed
-func _on_action_just_pressed(action: String) -> void:
+func _on_action_just_pressed(_action: String) -> void:
 	pass
 
 ## Called when an action is just released
 ## Override to handle action just released
-func _on_action_just_released(action: String) -> void:
+func _on_action_just_released(_action: String) -> void:
 	pass
 
 ## Called when an action is remapped
 ## Override to handle action remapping
-func _on_action_remapped(action: String, old_event: InputEvent, new_event: InputEvent) -> void:
+func _on_action_remapped(_action: String, _old_event: InputEvent, _new_event: InputEvent) -> void:
 	pass
 
 ## Called when an action is reset
 ## Override to handle action reset
-func _on_action_reset(action: String) -> void:
+func _on_action_reset(_action: String) -> void:
 	pass
 
 ## Called when all actions are reset

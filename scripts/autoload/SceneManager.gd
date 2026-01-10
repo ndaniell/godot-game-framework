@@ -265,7 +265,7 @@ func _perform_transition(from_scene: String, to_scene: String, transition_type: 
 
 ## Fade transition
 ## Override this method to customize fade transition
-func _fade_transition(from_scene: String, to_scene: String) -> void:
+func _fade_transition(_from_scene: String, to_scene: String) -> void:
 	# Create a simple fade effect
 	# Override to implement custom fade
 	var fade_duration := default_transition_duration
@@ -282,7 +282,7 @@ func _fade_transition(from_scene: String, to_scene: String) -> void:
 
 ## Slide transition
 ## Override this method to customize slide transition
-func _slide_transition(from_scene: String, to_scene: String) -> void:
+func _slide_transition(_from_scene: String, to_scene: String) -> void:
 	# Create a simple slide effect
 	# Override to implement custom slide
 	var slide_duration := default_transition_duration
@@ -313,32 +313,32 @@ func _on_scene_manager_ready() -> void:
 
 ## Called when a scene is loaded
 ## Override to handle scene loading
-func _on_scene_loaded(scene_path: String, scene_instance: Node) -> void:
+func _on_scene_loaded(_scene_path: String, _scene_instance: Node) -> void:
 	pass
 
 ## Called when a scene is unloaded
 ## Override to handle scene unloading
-func _on_scene_unloaded(scene_path: String) -> void:
+func _on_scene_unloaded(_scene_path: String) -> void:
 	pass
 
 ## Called when a scene is preloaded
 ## Override to handle scene preloading
-func _on_scene_preloaded(scene_path: String, packed_scene: PackedScene) -> void:
+func _on_scene_preloaded(_scene_path: String, _packed_scene: PackedScene) -> void:
 	pass
 
 ## Called when a scene is unpreloaded
 ## Override to handle scene unpreloading
-func _on_scene_unpreloaded(scene_path: String) -> void:
+func _on_scene_unpreloaded(_scene_path: String) -> void:
 	pass
 
 ## Called when transition starts
 ## Override to handle transition start
-func _on_transition_started(from_scene: String, to_scene: String, transition_type: String) -> void:
+func _on_transition_started(_from_scene: String, _to_scene: String, _transition_type: String) -> void:
 	pass
 
 ## Called when transition completes
 ## Override to handle transition completion
-func _on_transition_completed(scene_path: String) -> void:
+func _on_transition_completed(_scene_path: String) -> void:
 	pass
 
 ## Called when all scenes are cleared

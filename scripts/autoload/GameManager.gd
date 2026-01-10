@@ -127,7 +127,7 @@ func change_scene(scene_path: String, transition_type: String = "") -> void:
 	
 	# Perform transition if specified
 	if transition_type != "":
-		await _perform_transition(scene_path, transition_type)
+		_perform_transition(scene_path, transition_type)
 	else:
 		get_tree().change_scene_to_file(scene_path)
 	
@@ -138,7 +138,7 @@ func change_scene(scene_path: String, transition_type: String = "") -> void:
 
 ## Perform scene transition
 ## Override this method to implement custom transitions
-func _perform_transition(scene_path: String, transition_type: String) -> void:
+func _perform_transition(scene_path: String, _transition_type: String) -> void:
 	# Default: immediate transition
 	# Override to add fade, slide, etc.
 	get_tree().change_scene_to_file(scene_path)
@@ -178,32 +178,32 @@ func _on_game_ready() -> void:
 
 ## Called when game state changes
 ## Override to handle state-specific logic
-func _on_state_changed(old_state: String, new_state: String) -> void:
+func _on_state_changed(_old_state: String, _new_state: String) -> void:
 	pass
 
 ## Called when pause state changes
 ## Override to handle pause-specific logic
-func _on_pause_changed(is_paused: bool) -> void:
+func _on_pause_changed(_is_paused: bool) -> void:
 	pass
 
 ## Called when a node is added to the scene tree
 ## Override to handle node additions
-func _on_node_added(node: Node) -> void:
+func _on_node_added(_node: Node) -> void:
 	pass
 
 ## Called when a node is removed from the scene tree
 ## Override to handle node removals
-func _on_node_removed(node: Node) -> void:
+func _on_node_removed(_node: Node) -> void:
 	pass
 
 ## Called when scene change starts
 ## Override to add pre-transition logic
-func _on_scene_change_started(scene_path: String, transition_type: String) -> void:
+func _on_scene_change_started(_scene_path: String, _transition_type: String) -> void:
 	pass
 
 ## Called when scene has changed
 ## Override to add post-transition logic
-func _on_scene_changed(scene_path: String) -> void:
+func _on_scene_changed(_scene_path: String) -> void:
 	pass
 
 ## Called when game over state is entered

@@ -1,6 +1,8 @@
 extends Node
 
 ## TestFramework - Generic testing framework for the Godot Game Framework
+
+class_name TestFramework
 ##
 ## This framework provides utilities for testing any part of the framework.
 ## It's designed to be extensible and can test managers, utilities, or any framework component.

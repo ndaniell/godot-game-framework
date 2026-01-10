@@ -284,27 +284,27 @@ func _on_resource_manager_ready() -> void:
 
 ## Called when a resource is loaded
 ## Override to handle resource loading
-func _on_resource_loaded(resource_path: String, resource: Resource) -> void:
+func _on_resource_loaded(_resource_path: String, _resource: Resource) -> void:
 	pass
 
 ## Called when a resource is loaded from cache
 ## Override to handle cache hits
-func _on_resource_loaded_from_cache(resource_path: String, resource: Resource) -> void:
+func _on_resource_loaded_from_cache(_resource_path: String, _resource: Resource) -> void:
 	pass
 
 ## Called when a resource is unloaded
 ## Override to handle resource unloading
-func _on_resource_unloaded(resource_path: String) -> void:
+func _on_resource_unloaded(_resource_path: String) -> void:
 	pass
 
 ## Called when a resource is preloaded
 ## Override to handle resource preloading
-func _on_resource_preloaded(resource_path: String, resource: Resource) -> void:
+func _on_resource_preloaded(_resource_path: String, _resource: Resource) -> void:
 	pass
 
 ## Called when a resource is unpreloaded
 ## Override to handle resource unpreloading
-func _on_resource_unpreloaded(resource_path: String) -> void:
+func _on_resource_unpreloaded(_resource_path: String) -> void:
 	pass
 
 ## Called when cache is cleared
@@ -319,5 +319,5 @@ func _on_preloaded_cleared() -> void:
 
 ## Called when unused resources are unloaded
 ## Override to handle unused resource cleanup
-func _on_unused_resources_unloaded(count: int) -> void:
+func _on_unused_resources_unloaded(_count: int) -> void:
 	pass
