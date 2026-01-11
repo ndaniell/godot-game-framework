@@ -1,0 +1,58 @@
+extends "res://scripts/autoload/GameManager.gd"
+
+const SCENE_FPS_MAIN := "res://scenes/fps/FpsMain.tscn"
+const SCENE_ARENA := "res://scenes/fps/levels/Arena01.tscn"
+
+func _ready() -> void:
+	LogManager.info("FpsGameManager", "FpsGameManager initializing...")
+	super._ready()
+	LogManager.info("FpsGameManager", "FpsGameManager ready")
+
+func _on_game_ready() -> void:
+	if EventManager:
+		EventManager.subscribe("fps_match_start", _on_match_start)
+		EventManager.subscribe("network_disconnected", _on_network_disconnected)
+		EventManager.subscribe("peer_joined", _on_peer_joined)
+
+	# Ensure we start on the example main scene.
+	if get_tree().current_scene == null or get_tree().current_scene.scene_file_path != SCENE_FPS_MAIN:
+		change_state("MENU")
+		change_scene(SCENE_FPS_MAIN, "fade")
+
+func _exit_tree() -> void:
+	if EventManager:
+		EventManager.unsubscribe("fps_match_start", _on_match_start)
+		EventManager.unsubscribe("network_disconnected", _on_network_disconnected)
+		EventManager.unsubscribe("peer_joined", _on_peer_joined)
+
+func _on_menu_entered() -> void:
+	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+
+func _on_state_changed(old_state: String, new_state: String) -> void:
+	super._on_state_changed(old_state, new_state)
+	match new_state:
+		"MENU":
+			if current_scene_path != SCENE_FPS_MAIN:
+				change_scene(SCENE_FPS_MAIN, "fade")
+		"PLAYING":
+			if current_scene_path != SCENE_ARENA:
+				change_scene(SCENE_ARENA, "fade")
+
+func _on_match_start(_data: Dictionary) -> void:
+	# Fired by NetworkManager.broadcast_session_event from the host; all peers receive it.
+	change_state("PLAYING")
+
+func _on_network_disconnected(_data: Dictionary) -> void:
+	change_state("MENU")
+
+func _on_peer_joined(data: Dictionary) -> void:
+	# Late-join support: if the match is already running, tell the new peer to load Arena01.
+	if not multiplayer.is_server():
+		return
+	if current_state != "PLAYING":
+		return
+	var peer_id := int(data.get("peer_id", 0))
+	if peer_id <= 0:
+		return
+	if NetworkManager:
+		NetworkManager.send_session_event_to_peer(peer_id, &"fps_match_start", {})

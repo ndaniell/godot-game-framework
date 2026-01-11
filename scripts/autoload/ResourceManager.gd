@@ -25,11 +25,16 @@ var _preloaded_resources: Dictionary = {}  # path -> Resource
 # Unload timer
 var _unload_timer: Timer
 
+
 ## Initialize the resource manager
 ## Override this method to add custom initialization
 func _ready() -> void:
+	# Get LogManager reference
+
+	LogManager.info("ResourceManager", "ResourceManager initializing...")
 	_initialize_resource_manager()
 	_on_resource_manager_ready()
+	LogManager.info("ResourceManager", "ResourceManager ready")
 
 ## Initialize resource manager
 ## Override this method to customize initialization
@@ -45,41 +50,45 @@ func _initialize_resource_manager() -> void:
 ## Override this method to add custom load logic
 func load_resource(resource_path: String, use_cache: bool = true) -> Resource:
 	if resource_path.is_empty():
-		push_error("ResourceManager: Cannot load empty resource path")
+		LogManager.error("ResourceManager", "Cannot load empty resource path")
 		return null
-	
+
 	# Check cache first
 	if use_cache and enable_caching and _resource_cache.has(resource_path):
 		var cached_resource := _resource_cache[resource_path] as Resource
 		if cached_resource != null:
 			_increment_ref_count(resource_path)
+			LogManager.trace("ResourceManager", "Cache hit for resource: " + resource_path)
 			_on_resource_loaded_from_cache(resource_path, cached_resource)
 			return cached_resource
-	
+
 	# Load resource
 	if not ResourceLoader.exists(resource_path):
-		push_error("ResourceManager: Resource does not exist: " + resource_path)
+		LogManager.error("ResourceManager", "Resource does not exist: " + resource_path)
 		return null
-	
+
+	LogManager.debug("ResourceManager", "Loading resource: " + resource_path)
 	var resource := load(resource_path) as Resource
 	if resource == null:
-		push_error("ResourceManager: Failed to load resource: " + resource_path)
+		LogManager.error("ResourceManager", "Failed to load resource: " + resource_path)
 		return null
-	
+
+	LogManager.debug("ResourceManager", "Successfully loaded resource: " + resource_path)
+
 	# Cache resource if enabled
 	if use_cache and enable_caching:
 		_cache_resource(resource_path, resource)
-	
+
 	resource_loaded.emit(resource_path, resource)
 	_on_resource_loaded(resource_path, resource)
-	
+
 	return resource
 
 ## Load a resource asynchronously
 ## Override this method to add custom async load logic
 func load_resource_async(resource_path: String, use_cache: bool = true) -> Resource:
 	if resource_path.is_empty():
-		push_error("ResourceManager: Cannot load empty resource path")
+		LogManager.error("ResourceManager", "Cannot load empty resource path")
 		return null
 	
 	# Check cache first
@@ -91,12 +100,12 @@ func load_resource_async(resource_path: String, use_cache: bool = true) -> Resou
 	
 	# Start async load
 	if not ResourceLoader.exists(resource_path):
-		push_error("ResourceManager: Resource does not exist: " + resource_path)
+		LogManager.error("ResourceManager", "Resource does not exist: " + resource_path)
 		return null
 	
 	var loader := ResourceLoader.load_threaded_request(resource_path)
 	if loader == null:
-		push_error("ResourceManager: Failed to start async load: " + resource_path)
+		LogManager.error("ResourceManager", "Failed to start async load: " + resource_path)
 		return null
 	
 	# Wait for load to complete
@@ -105,12 +114,12 @@ func load_resource_async(resource_path: String, use_cache: bool = true) -> Resou
 	
 	var status := ResourceLoader.load_threaded_get_status(resource_path)
 	if status != ResourceLoader.THREAD_LOAD_LOADED:
-		push_error("ResourceManager: Async load failed: " + resource_path)
+		LogManager.error("ResourceManager", "Async load failed: " + resource_path)
 		return null
 	
 	var resource := ResourceLoader.load_threaded_get(resource_path) as Resource
 	if resource == null:
-		push_error("ResourceManager: Failed to get async loaded resource: " + resource_path)
+		LogManager.error("ResourceManager", "Failed to get async loaded resource: " + resource_path)
 		return null
 	
 	# Cache resource if enabled
@@ -147,7 +156,7 @@ func unload_resource(resource_path: String, force: bool = false) -> bool:
 ## Override this method to add custom preload logic
 func preload_resource(resource_path: String) -> Resource:
 	if resource_path.is_empty():
-		push_error("ResourceManager: Cannot preload empty resource path")
+		LogManager.error("ResourceManager", "Cannot preload empty resource path")
 		return null
 	
 	# Check if already preloaded

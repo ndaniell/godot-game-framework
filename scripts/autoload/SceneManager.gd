@@ -40,11 +40,11 @@ func _initialize_scene_manager() -> void:
 ## Override this method to add custom load logic
 func load_scene(scene_path: String, parent: Node = null, make_current: bool = false) -> Node:
 	if scene_path.is_empty():
-		push_error("SceneManager: Cannot load empty scene path")
+		LogManager.error("SceneManager", "Cannot load empty scene path")
 		return null
 	
 	if not ResourceLoader.exists(scene_path):
-		push_error("SceneManager: Scene does not exist: " + scene_path)
+		LogManager.error("SceneManager", "Scene does not exist: " + scene_path)
 		return null
 	
 	# Check if already loaded
@@ -58,13 +58,13 @@ func load_scene(scene_path: String, parent: Node = null, make_current: bool = fa
 	# Load the scene
 	var packed_scene := load(scene_path) as PackedScene
 	if packed_scene == null:
-		push_error("SceneManager: Failed to load scene: " + scene_path)
+		LogManager.error("SceneManager", "Failed to load scene: " + scene_path)
 		return null
 	
 	# Instance the scene
 	var scene_instance := packed_scene.instantiate()
 	if scene_instance == null:
-		push_error("SceneManager: Failed to instantiate scene: " + scene_path)
+		LogManager.error("SceneManager", "Failed to instantiate scene: " + scene_path)
 		return null
 	
 	# Add to scene tree
@@ -90,7 +90,7 @@ func load_scene(scene_path: String, parent: Node = null, make_current: bool = fa
 ## Override this method to add custom unload logic
 func unload_scene(scene_path: String, remove_from_cache: bool = true) -> bool:
 	if not _loaded_scenes.has(scene_path):
-		push_warning("SceneManager: Scene not loaded: " + scene_path)
+		LogManager.warn("SceneManager", "Scene not loaded: " + scene_path)
 		return false
 	
 	var scene_instance := _loaded_scenes[scene_path] as Node
@@ -120,15 +120,15 @@ func unload_scene(scene_path: String, remove_from_cache: bool = true) -> bool:
 ## Override this method to add custom change logic
 func change_scene(scene_path: String, transition_type: String = "") -> void:
 	if _transition_in_progress:
-		push_warning("SceneManager: Transition already in progress")
+		LogManager.warn("SceneManager", "Transition already in progress")
 		return
 	
 	if scene_path.is_empty():
-		push_error("SceneManager: Cannot change to empty scene path")
+		LogManager.error("SceneManager", "Cannot change to empty scene path")
 		return
 	
 	if not ResourceLoader.exists(scene_path):
-		push_error("SceneManager: Scene does not exist: " + scene_path)
+		LogManager.error("SceneManager", "Scene does not exist: " + scene_path)
 		return
 	
 	var from_scene := _current_scene_path
@@ -153,11 +153,11 @@ func change_scene(scene_path: String, transition_type: String = "") -> void:
 ## Override this method to add custom preload logic
 func preload_scene(scene_path: String) -> PackedScene:
 	if scene_path.is_empty():
-		push_error("SceneManager: Cannot preload empty scene path")
+		LogManager.error("SceneManager", "Cannot preload empty scene path")
 		return null
 	
 	if not ResourceLoader.exists(scene_path):
-		push_error("SceneManager: Scene does not exist: " + scene_path)
+		LogManager.error("SceneManager", "Scene does not exist: " + scene_path)
 		return null
 	
 	# Check if already preloaded
@@ -167,7 +167,7 @@ func preload_scene(scene_path: String) -> PackedScene:
 	# Preload the scene
 	var packed_scene := load(scene_path) as PackedScene
 	if packed_scene == null:
-		push_error("SceneManager: Failed to preload scene: " + scene_path)
+		LogManager.error("SceneManager", "Failed to preload scene: " + scene_path)
 		return null
 	
 	_preloaded_scenes[scene_path] = packed_scene
@@ -300,7 +300,7 @@ func _slide_transition(_from_scene: String, to_scene: String) -> void:
 ## Reload current scene
 func reload_current_scene() -> void:
 	if _current_scene_path.is_empty():
-		push_warning("SceneManager: No current scene to reload")
+		LogManager.warn("SceneManager", "No current scene to reload")
 		return
 	change_scene(_current_scene_path)
 

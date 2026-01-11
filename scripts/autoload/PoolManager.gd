@@ -35,15 +35,15 @@ func _initialize_pool_manager() -> void:
 ## Override this method to add custom pool creation logic
 func create_pool(pool_name: String, prefab: PackedScene, initial_size: int = -1) -> bool:
 	if pool_name.is_empty():
-		push_error("PoolManager: Cannot create pool with empty name")
+		LogManager.error("PoolManager", "Cannot create pool with empty name")
 		return false
 	
 	if prefab == null:
-		push_error("PoolManager: Cannot create pool with null prefab")
+		LogManager.error("PoolManager", "Cannot create pool with null prefab")
 		return false
 	
 	if _pools.has(pool_name):
-		push_warning("PoolManager: Pool already exists: " + pool_name)
+		LogManager.warn("PoolManager", "Pool already exists: " + pool_name)
 		return false
 	
 	var size := initial_size if initial_size > 0 else default_pool_size
@@ -68,7 +68,7 @@ func create_pool(pool_name: String, prefab: PackedScene, initial_size: int = -1)
 ## Override this method to add custom spawn logic
 func spawn(pool_name: String, position: Vector3 = Vector3.ZERO, parent: Node = null) -> Node:
 	if not _pools.has(pool_name):
-		push_error("PoolManager: Pool does not exist: " + pool_name)
+		LogManager.error("PoolManager", "Pool does not exist: " + pool_name)
 		return null
 	
 	var pool := _pools[pool_name] as Dictionary
@@ -87,13 +87,13 @@ func spawn(pool_name: String, position: Vector3 = Vector3.ZERO, parent: Node = n
 			if active.size() < max_pool_size:
 				obj = prefab.instantiate()
 				if obj == null:
-					push_error("PoolManager: Failed to instantiate prefab for pool: " + pool_name)
+					LogManager.error("PoolManager", "Failed to instantiate prefab for pool: " + pool_name)
 					return null
 			else:
-				push_warning("PoolManager: Pool at max size, cannot spawn: " + pool_name)
+				LogManager.warn("PoolManager", "Pool at max size, cannot spawn: " + pool_name)
 				return null
 		else:
-			push_warning("PoolManager: Pool exhausted, cannot spawn: " + pool_name)
+			LogManager.warn("PoolManager", "Pool exhausted, cannot spawn: " + pool_name)
 			return null
 	
 	# Add to active pool
@@ -131,7 +131,7 @@ func spawn(pool_name: String, position: Vector3 = Vector3.ZERO, parent: Node = n
 ## Override this method to add custom despawn logic
 func despawn(pool_name: String, obj: Node) -> bool:
 	if not _pools.has(pool_name):
-		push_error("PoolManager: Pool does not exist: " + pool_name)
+		LogManager.error("PoolManager", "Pool does not exist: " + pool_name)
 		return false
 	
 	var pool := _pools[pool_name] as Dictionary
@@ -141,7 +141,7 @@ func despawn(pool_name: String, obj: Node) -> bool:
 	# Check if object is in active pool
 	var index := active.find(obj)
 	if index < 0:
-		push_warning("PoolManager: Object not in active pool: " + pool_name)
+		LogManager.warn("PoolManager", "Object not in active pool: " + pool_name)
 		return false
 	
 	# Remove from active
@@ -172,7 +172,7 @@ func despawn(pool_name: String, obj: Node) -> bool:
 ## Expand a pool by creating additional objects
 func expand_pool(pool_name: String, count: int) -> void:
 	if not _pools.has(pool_name):
-		push_error("PoolManager: Pool does not exist: " + pool_name)
+		LogManager.error("PoolManager", "Pool does not exist: " + pool_name)
 		return
 	
 	_expand_pool(pool_name, count)
@@ -186,7 +186,7 @@ func _expand_pool(pool_name: String, count: int) -> void:
 	for i in range(count):
 		var obj := prefab.instantiate()
 		if obj == null:
-			push_error("PoolManager: Failed to instantiate prefab for pool: " + pool_name)
+			LogManager.error("PoolManager", "Failed to instantiate prefab for pool: " + pool_name)
 			continue
 		
 		# Initialize object as inactive

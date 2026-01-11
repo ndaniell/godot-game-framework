@@ -26,12 +26,17 @@ var save_data: Dictionary = {}
 # Auto-save timer
 var _auto_save_timer: Timer
 
+
 ## Initialize the save manager
 ## Override this method to add custom initialization
 func _ready() -> void:
+	# Get LogManager reference
+
+	LogManager.info("SaveManager", "SaveManager initializing...")
 	_initialize_save_directory()
 	_initialize_auto_save()
 	_on_save_manager_ready()
+	LogManager.info("SaveManager", "SaveManager ready")
 
 ## Initialize save directory
 ## Override this method to customize directory setup
@@ -54,107 +59,115 @@ func _initialize_auto_save() -> void:
 ## Override this method to add custom save logic
 func save_game(slot: int = 0, metadata: Dictionary = {}) -> bool:
 	if slot < 0 or slot >= max_save_slots:
-		push_error("SaveManager: Invalid save slot: " + str(slot))
+		LogManager.error("SaveManager", "Invalid save slot: " + str(slot))
 		save_failed.emit(slot, "Invalid save slot")
 		return false
-	
+
+	LogManager.info("SaveManager", "Saving game to slot " + str(slot))
+
 	# Prepare save data
 	var save_dict := _prepare_save_data(slot, metadata)
-	
+
 	# Get file path
 	var file_path := _get_save_file_path(slot)
-	
+
 	# Save to file
 	var file := FileAccess.open(file_path, FileAccess.WRITE)
 	if file == null:
 		var error := FileAccess.get_open_error()
-		push_error("SaveManager: Failed to open save file: " + file_path + " (Error: " + str(error) + ")")
+		LogManager.error("SaveManager", "Failed to open save file: " + file_path + " (Error: " + str(error) + ")")
 		save_failed.emit(slot, "Failed to open file: " + str(error))
 		return false
-	
+
 	# Write save data
 	file.store_string(JSON.stringify(save_dict))
 	file.close()
-	
+
+	LogManager.info("SaveManager", "Successfully saved game to slot " + str(slot))
+
 	# Update current slot
 	current_save_slot = slot
 	save_data = save_dict
-	
+
 	save_created.emit(slot, save_dict.get("metadata", {}))
 	_on_game_saved(slot, save_dict)
-	
+
 	return true
 
 ## Load game data from a slot
 ## Override this method to add custom load logic
 func load_game(slot: int = 0) -> bool:
 	if slot < 0 or slot >= max_save_slots:
-		push_error("SaveManager: Invalid save slot: " + str(slot))
+		LogManager.error("SaveManager", "Invalid save slot: " + str(slot))
 		save_failed.emit(slot, "Invalid save slot")
 		return false
-	
+
+	LogManager.info("SaveManager", "Loading game from slot " + str(slot))
+
 	# Get file path
 	var file_path := _get_save_file_path(slot)
-	
+
 	# Check if file exists
 	if not FileAccess.file_exists(file_path):
-		push_warning("SaveManager: Save file does not exist: " + file_path)
+		LogManager.warn("SaveManager", "Save file does not exist: " + file_path)
 		save_failed.emit(slot, "Save file does not exist")
 		return false
-	
+
 	# Load from file
 	var file := FileAccess.open(file_path, FileAccess.READ)
 	if file == null:
 		var error := FileAccess.get_open_error()
-		push_error("SaveManager: Failed to open save file: " + file_path + " (Error: " + str(error) + ")")
+		LogManager.error("SaveManager", "Failed to open save file: " + file_path + " (Error: " + str(error) + ")")
 		save_failed.emit(slot, "Failed to open file: " + str(error))
 		return false
-	
+
 	# Read and parse JSON
 	var json_string := file.get_as_text()
 	file.close()
-	
+
 	var json := JSON.new()
 	var parse_error := json.parse(json_string)
 	if parse_error != OK:
-		push_error("SaveManager: Failed to parse save file JSON: " + file_path)
+		LogManager.error("SaveManager", "Failed to parse save file JSON: " + file_path)
 		save_failed.emit(slot, "Failed to parse JSON")
 		return false
-	
+
 	var loaded_data := json.data as Dictionary
 	if loaded_data.is_empty():
-		push_error("SaveManager: Save file is empty or invalid: " + file_path)
+		LogManager.error("SaveManager", "Save file is empty or invalid: " + file_path)
 		save_failed.emit(slot, "Save file is empty")
 		return false
-	
+
+	LogManager.info("SaveManager", "Successfully loaded game from slot " + str(slot))
+
 	# Update current slot and data
 	current_save_slot = slot
 	save_data = loaded_data
-	
+
 	# Apply loaded data
 	_apply_save_data(loaded_data)
-	
+
 	save_loaded.emit(slot, loaded_data)
 	_on_game_loaded(slot, loaded_data)
-	
+
 	return true
 
 ## Delete a save slot
 ## Override this method to add custom delete logic
 func delete_save(slot: int) -> bool:
 	if slot < 0 or slot >= max_save_slots:
-		push_error("SaveManager: Invalid save slot: " + str(slot))
+		LogManager.error("SaveManager", "Invalid save slot: " + str(slot))
 		return false
 	
 	var file_path := _get_save_file_path(slot)
 	
 	if not FileAccess.file_exists(file_path):
-		push_warning("SaveManager: Save file does not exist: " + file_path)
+		LogManager.warn("SaveManager", "Save file does not exist: " + file_path)
 		return false
 	
 	var dir := DirAccess.open("user://")
 	if dir.remove(file_path) != OK:
-		push_error("SaveManager: Failed to delete save file: " + file_path)
+		LogManager.error("SaveManager", "Failed to delete save file: " + file_path)
 		return false
 	
 	# Clear current slot if it was deleted

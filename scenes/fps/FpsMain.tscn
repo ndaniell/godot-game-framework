@@ -1,0 +1,13 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/examples/fps/ui/FpsMain.gd" id="1_fps_main_script"]
+[ext_resource type="PackedScene" path="res://scenes/fps/ui/MainMenu.tscn" id="2_main_menu_scene"]
+[ext_resource type="PackedScene" path="res://scenes/fps/ui/Lobby.tscn" id="3_lobby_scene"]
+
+[node name="FpsMain" type="Node"]
+script = ExtResource("1_fps_main_script")
+
+[node name="MainMenu" parent="." instance=ExtResource("2_main_menu_scene")]
+
+[node name="Lobby" parent="." instance=ExtResource("3_lobby_scene")]
+

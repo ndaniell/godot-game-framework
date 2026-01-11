@@ -17,6 +17,7 @@ signal settings_saved()
 @export var settings_file_path: String = "user://settings.save"
 @export var auto_save: bool = true
 
+
 # Graphics settings
 @export_group("Graphics Settings")
 @export var fullscreen: bool = false:
@@ -83,15 +84,20 @@ var _settings: Dictionary = {
 	"custom": {}
 }
 
+
 ## Initialize the settings manager
 ## Override this method to add custom initialization
 func _ready() -> void:
+	# Get LogManager reference
+
+	LogManager.info("SettingsManager", "SettingsManager initializing...")
 	_initialize_settings()
 	# Wait for other managers to be ready before loading settings
 	await get_tree().process_frame
 	load_settings()
 	_apply_settings()
 	_on_settings_manager_ready()
+	LogManager.info("SettingsManager", "SettingsManager ready")
 
 ## Initialize settings
 ## Override this method to customize initialization
@@ -118,51 +124,58 @@ func _initialize_settings() -> void:
 ## Load settings from file
 ## Override this method to customize loading
 func load_settings() -> bool:
+	LogManager.debug("SettingsManager", "Loading settings from: " + settings_file_path)
+
 	if not FileAccess.file_exists(settings_file_path):
-		push_warning("SettingsManager: Settings file does not exist, using defaults")
+		LogManager.warn("SettingsManager", "Settings file does not exist, using defaults")
 		return false
-	
+
 	var file := FileAccess.open(settings_file_path, FileAccess.READ)
 	if file == null:
-		push_error("SettingsManager: Failed to open settings file")
+		LogManager.error("SettingsManager", "Failed to open settings file")
 		return false
-	
+
 	var json_string := file.get_as_text()
 	file.close()
-	
+
 	var json := JSON.new()
 	if json.parse(json_string) != OK:
-		push_error("SettingsManager: Failed to parse settings JSON")
+		LogManager.error("SettingsManager", "Failed to parse settings JSON")
 		return false
-	
+
 	var loaded_settings := json.data as Dictionary
 	_settings = loaded_settings
-	
+
+	LogManager.info("SettingsManager", "Settings loaded successfully")
+
 	# Apply loaded settings
 	_apply_settings()
-	
+
 	settings_loaded.emit()
 	_on_settings_loaded()
-	
+
 	return true
 
 ## Save settings to file
 ## Override this method to customize saving
 func save_settings() -> bool:
+	LogManager.debug("SettingsManager", "Saving settings to: " + settings_file_path)
+
 	# Update settings dictionary before saving
 	_update_settings_dict()
-	
+
 	var file := FileAccess.open(settings_file_path, FileAccess.WRITE)
 	if file == null:
-		push_error("SettingsManager: Failed to open settings file for writing")
+		LogManager.error("SettingsManager", "Failed to open settings file for writing")
 		return false
-	
+
 	file.store_string(JSON.stringify(_settings))
 	file.close()
-	
+
+	LogManager.info("SettingsManager", "Settings saved successfully")
 	settings_saved.emit()
 	_on_settings_saved()
-	
+
 	return true
 
 ## Apply settings to the game
@@ -234,9 +247,11 @@ func _update_settings_dict() -> void:
 func set_setting(category: String, key: String, value: Variant) -> void:
 	if not _settings.has(category):
 		_settings[category] = {}
-	
+
 	_settings[category][key] = value
-	
+
+	LogManager.debug("SettingsManager", "Setting changed: " + category + "." + key + " = " + str(value))
+
 	# Apply setting if it's a known category
 	match category:
 		"graphics":
@@ -245,9 +260,9 @@ func set_setting(category: String, key: String, value: Variant) -> void:
 			_apply_audio_setting(key, value)
 		"gameplay":
 			_apply_gameplay_setting(key, value)
-	
+
 	_setting_changed(category, key, value)
-	
+
 	if auto_save:
 		save_settings()
 

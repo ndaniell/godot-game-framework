@@ -12,7 +12,8 @@ The test framework is **generic and extensible**, designed to test any part of t
 2. **TestRegistry** - Dynamic test suite registration system
 3. **TestSuite** - Base class for creating test suites
 4. **TestRunner** - Discovers and runs all registered tests
-5. **ManagerTests** - Example test suite for managers
+5. **ManagerTests** - Comprehensive test suite for all managers
+6. **LogManagerTests** - Dedicated test suite for LogManager functionality
 
 ## Key Features
 
@@ -77,11 +78,20 @@ func teardown() -> void:
 ## Testing Any Framework Component
 
 The framework can test:
-- Managers (AudioManager, GameManager, etc.)
+- Managers (AudioManager, GameManager, LogManager, etc.)
 - Utilities
 - Helper functions
 - Integration between components
 - Custom extensions
+
+## LogManager Testing
+
+LogManager has comprehensive tests covering:
+- Log level filtering and validation
+- Ring buffer functionality and thread safety
+- All logging methods (trace, debug, info, warn, error)
+- Level setting by name and enumeration
+- Custom logger registration and message capture
 
 ## Note on Linter Warnings
 

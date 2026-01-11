@@ -210,3 +210,7 @@ Each manager has comprehensive documentation including:
 - Usage examples
 - Best practices
 - Integration guides
+
+## Examples
+
+- **Multiplayer FPS (ENet, desktop)**: see [`docs/ExampleMultiplayerFPS.md`](docs/ExampleMultiplayerFPS.md)

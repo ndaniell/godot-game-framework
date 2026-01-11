@@ -83,7 +83,7 @@ func _auto_detect_input_mode() -> void:
 ## Override this method to add custom press detection
 func is_action_pressed(action: String) -> bool:
 	if not InputMap.has_action(action):
-		push_warning("InputManager: Action does not exist: " + action)
+		LogManager.warn("InputManager", "Action does not exist: " + action)
 		return false
 	
 	var pressed := Input.is_action_pressed(action)
@@ -95,7 +95,7 @@ func is_action_pressed(action: String) -> bool:
 ## Check if an input action was just pressed this frame
 func is_action_just_pressed(action: String) -> bool:
 	if not InputMap.has_action(action):
-		push_warning("InputManager: Action does not exist: " + action)
+		LogManager.warn("InputManager", "Action does not exist: " + action)
 		return false
 	
 	var just_pressed := Input.is_action_just_pressed(action)
@@ -107,7 +107,7 @@ func is_action_just_pressed(action: String) -> bool:
 ## Check if an input action was just released this frame
 func is_action_just_released(action: String) -> bool:
 	if not InputMap.has_action(action):
-		push_warning("InputManager: Action does not exist: " + action)
+		LogManager.warn("InputManager", "Action does not exist: " + action)
 		return false
 	
 	var just_released := Input.is_action_just_released(action)
@@ -119,14 +119,14 @@ func is_action_just_released(action: String) -> bool:
 ## Get action strength (0.0 to 1.0)
 func get_action_strength(action: String) -> float:
 	if not InputMap.has_action(action):
-		push_warning("InputManager: Action does not exist: " + action)
+		LogManager.warn("InputManager", "Action does not exist: " + action)
 		return 0.0
 	return Input.get_action_strength(action)
 
 ## Get action raw strength (can be negative for axes)
 func get_action_raw_strength(action: String, exact: bool = false) -> float:
 	if not InputMap.has_action(action):
-		push_warning("InputManager: Action does not exist: " + action)
+		LogManager.warn("InputManager", "Action does not exist: " + action)
 		return 0.0
 	return Input.get_axis(action, action) if exact else Input.get_action_strength(action)
 
@@ -134,7 +134,7 @@ func get_action_raw_strength(action: String, exact: bool = false) -> float:
 func get_action_vector(negative_x: String, positive_x: String, negative_y: String, positive_y: String, exact: bool = false) -> Vector2:
 	if not InputMap.has_action(negative_x) or not InputMap.has_action(positive_x) or \
 	   not InputMap.has_action(negative_y) or not InputMap.has_action(positive_y):
-		push_warning("InputManager: One or more actions do not exist")
+		LogManager.warn("InputManager", "One or more actions do not exist")
 		return Vector2.ZERO
 	return Input.get_vector(negative_x, positive_x, negative_y, positive_y, 0.5 if exact else 0.0)
 
@@ -142,7 +142,7 @@ func get_action_vector(negative_x: String, positive_x: String, negative_y: Strin
 ## Override this method to add custom remapping logic
 func remap_action(action: String, event: InputEvent, remove_old: bool = true) -> bool:
 	if not InputMap.has_action(action):
-		push_error("InputManager: Cannot remap non-existent action: " + action)
+		LogManager.error("InputManager", "Cannot remap non-existent action: " + action)
 		return false
 	
 	# Get old events
@@ -199,7 +199,7 @@ func _events_match(event1: InputEvent, event2: InputEvent) -> bool:
 ## Reset action to default mapping
 func reset_action(action: String) -> bool:
 	if not InputMap.has_action(action):
-		push_error("InputManager: Cannot reset non-existent action: " + action)
+		LogManager.error("InputManager", "Cannot reset non-existent action: " + action)
 		return false
 	
 	# Clear current events
@@ -245,7 +245,7 @@ func has_remaps(action: String) -> bool:
 func _save_input_remaps() -> void:
 	var file := FileAccess.open(_remap_file_path, FileAccess.WRITE)
 	if file == null:
-		push_warning("InputManager: Failed to save input remaps")
+		LogManager.warn("InputManager", "Failed to save input remaps")
 		return
 	
 	# Convert events to dictionary format
@@ -277,7 +277,7 @@ func _load_input_remaps() -> void:
 	
 	var json := JSON.new()
 	if json.parse(json_string) != OK:
-		push_warning("InputManager: Failed to parse input remaps")
+		LogManager.warn("InputManager", "Failed to parse input remaps")
 		return
 	
 	var remap_data := json.data as Dictionary

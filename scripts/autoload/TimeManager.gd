@@ -135,15 +135,15 @@ func _update_day_night_state() -> void:
 ## Override this method to add custom timer creation logic
 func create_timer(timer_id: String, duration: float, loop: bool = false) -> bool:
 	if timer_id.is_empty():
-		push_error("TimeManager: Cannot create timer with empty ID")
+		LogManager.error("TimeManager", "Cannot create timer with empty ID")
 		return false
 	
 	if duration <= 0.0:
-		push_error("TimeManager: Timer duration must be positive")
+		LogManager.error("TimeManager", "Timer duration must be positive")
 		return false
 	
 	if timer_id in _timers:
-		push_warning("TimeManager: Timer already exists: " + timer_id)
+		LogManager.warn("TimeManager", "Timer already exists: " + timer_id)
 		return false
 	
 	_timers[timer_id] = {

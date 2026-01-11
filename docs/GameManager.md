@@ -176,9 +176,21 @@ func _on_state_changed(old_state: String, new_state: String) -> void:
 
 Called when pause state changes.
 
+### `_on_scene_change_started(scene_path: String, transition_type: String) -> void`
+
+Called when scene change begins.
+
 ### `_on_scene_changed(scene_path: String) -> void`
 
 Called after scene has changed.
+
+### `_on_node_added(node: Node) -> void`
+
+Called when a node is added to the scene tree.
+
+### `_on_node_removed(node: Node) -> void`
+
+Called when a node is removed from the scene tree.
 
 ### `_on_game_over() -> void`
 

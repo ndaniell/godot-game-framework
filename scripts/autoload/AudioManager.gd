@@ -97,7 +97,7 @@ func _set_bus_volume(bus_name: String, volume: float) -> void:
 ## Override this method to add custom music playback logic
 func play_music(stream: AudioStream, fade_in: bool = false, fade_duration: float = 1.0) -> void:
 	if stream == null:
-		push_warning("AudioManager: Attempted to play null music stream")
+		LogManager.warn("AudioManager", "Attempted to play null music stream")
 		return
 	
 	if _current_music == stream and _music_player.playing:
@@ -137,12 +137,12 @@ func stop_music(fade_out: bool = false, fade_duration: float = 1.0) -> void:
 ## Override this method to add custom SFX playback logic
 func play_sfx(stream: AudioStream, volume_scale: float = 1.0) -> AudioStreamPlayer:
 	if stream == null:
-		push_warning("AudioManager: Attempted to play null SFX stream")
+		LogManager.warn("AudioManager", "Attempted to play null SFX stream")
 		return null
 	
 	var player := _get_available_sfx_player()
 	if player == null:
-		push_warning("AudioManager: No available SFX players, consider increasing pool size")
+		LogManager.warn("AudioManager", "No available SFX players, consider increasing pool size")
 		return null
 	
 	player.stream = stream

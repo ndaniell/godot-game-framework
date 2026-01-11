@@ -29,6 +29,7 @@ func register_tests(registry: RefCounted) -> void:
 	# We need to ensure Callables are created fresh each time to avoid serialization issues
 	var audio_tests = _create_test_callables(_get_audio_manager_test_names())
 	var game_tests = _create_test_callables(_get_game_manager_test_names())
+	var log_tests = _create_test_callables(_get_log_manager_test_names())
 	var save_tests = _create_test_callables(_get_save_manager_test_names())
 	var input_tests = _create_test_callables(_get_input_manager_test_names())
 	var scene_tests = _create_test_callables(_get_scene_manager_test_names())
@@ -43,6 +44,7 @@ func register_tests(registry: RefCounted) -> void:
 	# Verify Callables are valid before registering
 	_validate_test_suite("AudioManager", audio_tests)
 	_validate_test_suite("GameManager", game_tests)
+	_validate_test_suite("LogManager", log_tests)
 	_validate_test_suite("SaveManager", save_tests)
 	_validate_test_suite("InputManager", input_tests)
 	_validate_test_suite("SceneManager", scene_tests)
@@ -57,6 +59,7 @@ func register_tests(registry: RefCounted) -> void:
 	# Register with source object so Callables can be recreated
 	registry.register_suite("AudioManager", audio_tests, Callable(), Callable(), self)
 	registry.register_suite("GameManager", game_tests, Callable(), Callable(), self)
+	registry.register_suite("LogManager", log_tests, Callable(), Callable(), self)
 	registry.register_suite("SaveManager", save_tests, Callable(), Callable(), self)
 	registry.register_suite("InputManager", input_tests, Callable(), Callable(), self)
 	registry.register_suite("SceneManager", scene_tests, Callable(), Callable(), self)
@@ -100,6 +103,118 @@ func _create_test_callables(test_defs: Array) -> Dictionary:
 		else:
 			push_warning("ManagerTests: Method not found: " + method_name)
 	return callables
+
+# ============================================================================
+# LogManager Tests
+# ============================================================================
+
+func _get_log_manager_test_names() -> Array:
+	return [
+		{"name": "LogManager exists", "method": "test_logmanager_exists"},
+		{"name": "Log level filtering", "method": "test_logmanager_level_filtering"},
+		{"name": "Ring buffer works", "method": "test_logmanager_ring_buffer"},
+		{"name": "Log methods function", "method": "test_logmanager_methods"},
+		{"name": "Level setting works", "method": "test_logmanager_level_setting"}
+	]
+
+func test_logmanager_exists() -> bool:
+	var framework = _get_framework()
+	if framework == null:
+		return false
+	return framework.assert_not_null(LogManager, "LogManager should exist")
+
+func test_logmanager_level_filtering() -> bool:
+	var framework = _get_framework()
+	if framework == null:
+		return false
+
+	var original_level = LogManager.current_level
+	LogManager.current_level = LogManager.LogLevel.ERROR
+	LogManager.clear_ring_buffer()
+
+	LogManager.info("Test", "This should be filtered")
+	LogManager.error("Test", "This should appear")
+
+	var buffer = LogManager.get_ring_buffer()
+	var error_found = false
+	var info_found = false
+
+	for entry in buffer:
+		if entry.get("level") == "ERROR":
+			error_found = true
+		elif entry.get("level") == "INFO":
+			info_found = true
+
+	LogManager.current_level = original_level
+
+	var result1 = framework.assert_true(error_found, "ERROR messages should appear")
+	var result2 = framework.assert_false(info_found, "INFO messages should be filtered")
+
+	return result1 and result2
+
+func test_logmanager_ring_buffer() -> bool:
+	var framework = _get_framework()
+	if framework == null:
+		return false
+
+	var original_enabled = LogManager.enable_ring_buffer
+	LogManager.enable_ring_buffer = true
+	LogManager.ring_buffer_size = 2
+	LogManager.clear_ring_buffer()
+
+	LogManager.info("Test", "Message 1")
+	LogManager.info("Test", "Message 2")
+	LogManager.info("Test", "Message 3")
+
+	var buffer = LogManager.get_ring_buffer()
+	LogManager.enable_ring_buffer = original_enabled
+
+	var result1 = framework.assert_equal(buffer.size(), 2, "Should maintain buffer size")
+	return result1
+
+func test_logmanager_methods() -> bool:
+	var framework = _get_framework()
+	if framework == null:
+		return false
+
+	var original_level = LogManager.current_level
+	LogManager.current_level = LogManager.LogLevel.TRACE
+
+	# Test that all logging methods can be called without crashing
+	LogManager.trace("Test", "Trace message")
+	LogManager.debug("Test", "Debug message")
+	LogManager.info("Test", "Info message")
+	LogManager.warn("Test", "Warn message")
+	LogManager.error("Test", "Error message")
+
+	LogManager.current_level = original_level
+
+	# Test that the methods exist and are callable
+	var result1 = framework.assert_true(LogManager.has_method("trace"), "Should have trace method")
+	var result2 = framework.assert_true(LogManager.has_method("debug"), "Should have debug method")
+	var result3 = framework.assert_true(LogManager.has_method("info"), "Should have info method")
+	var result4 = framework.assert_true(LogManager.has_method("warn"), "Should have warn method")
+	var result5 = framework.assert_true(LogManager.has_method("error"), "Should have error method")
+
+	# Test that ring buffer exists and is accessible
+	var buffer = LogManager.get_ring_buffer()
+	var result6 = framework.assert_not_null(buffer, "Ring buffer should be accessible")
+
+	return result1 and result2 and result3 and result4 and result5 and result6
+
+func test_logmanager_level_setting() -> bool:
+	var framework = _get_framework()
+	if framework == null:
+		return false
+
+	var original_level = LogManager.current_level
+
+	var result1 = framework.assert_true(LogManager.set_level_by_name("DEBUG"), "Should accept DEBUG")
+	var result2 = framework.assert_equal(LogManager.current_level, LogManager.LogLevel.DEBUG, "Should set DEBUG level")
+
+	LogManager.current_level = original_level
+
+	return result1 and result2
 
 # ============================================================================
 # AudioManager Tests

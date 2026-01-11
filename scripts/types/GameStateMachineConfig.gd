@@ -45,6 +45,6 @@ func validate() -> bool:
 		# Validate transitions reference existing states
 		for transition_state in state_def.allowed_transitions:
 			if not states.has(transition_state):
-				push_warning("GameStateMachineConfig: State '" + state_name + "' has transition to non-existent state: " + transition_state)
+				LogManager.warn("GameStateMachineConfig", "State '" + state_name + "' has transition to non-existent state: " + transition_state)
 	
 	return true

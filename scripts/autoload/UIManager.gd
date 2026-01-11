@@ -54,11 +54,11 @@ func _initialize_ui_manager() -> void:
 ## Override this method to add custom registration logic
 func register_ui_element(element_name: String, element: Control, z_layer: int = -1) -> void:
 	if element_name.is_empty():
-		push_error("UIManager: Cannot register UI element with empty name")
+		LogManager.error("UIManager", "Cannot register UI element with empty name")
 		return
 	
 	if element == null:
-		push_error("UIManager: Cannot register null UI element: " + element_name)
+		LogManager.error("UIManager", "Cannot register null UI element: " + element_name)
 		return
 	
 	# Set layer if specified
@@ -92,7 +92,7 @@ func unregister_ui_element(element_name: String) -> void:
 ## Override this method to add custom show logic
 func show_ui_element(element_name: String, fade_in: bool = false) -> void:
 	if not _ui_elements.has(element_name):
-		push_warning("UIManager: UI element not registered: " + element_name)
+		LogManager.warn("UIManager", "UI element not registered: " + element_name)
 		return
 	
 	var element := _ui_elements[element_name] as Control
@@ -113,7 +113,7 @@ func show_ui_element(element_name: String, fade_in: bool = false) -> void:
 ## Override this method to add custom hide logic
 func hide_ui_element(element_name: String, fade_out: bool = false) -> void:
 	if not _ui_elements.has(element_name):
-		push_warning("UIManager: UI element not registered: " + element_name)
+		LogManager.warn("UIManager", "UI element not registered: " + element_name)
 		return
 	
 	var element := _ui_elements[element_name] as Control
@@ -147,7 +147,7 @@ func toggle_ui_element(element_name: String) -> void:
 ## Override this method to add custom menu opening logic
 func open_menu(menu_name: String, close_others: bool = false) -> void:
 	if not _ui_elements.has(menu_name):
-		push_warning("UIManager: Menu not registered: " + menu_name)
+		LogManager.warn("UIManager", "Menu not registered: " + menu_name)
 		return
 	
 	# Close other menus if requested
@@ -192,7 +192,7 @@ func close_all_menus() -> void:
 ## Override this method to add custom dialog opening logic
 func open_dialog(dialog_name: String, modal: bool = true) -> void:
 	if not _ui_elements.has(dialog_name):
-		push_warning("UIManager: Dialog not registered: " + dialog_name)
+		LogManager.warn("UIManager", "Dialog not registered: " + dialog_name)
 		return
 	
 	# Add to open dialogs

@@ -12,6 +12,7 @@ signal scene_changed(scene_path: String)
 signal game_paused(is_paused: bool)
 signal game_quit()
 
+
 # State machine configuration
 @export_group("State Machine Configuration")
 @export var states_config_path: String = "res://resources/data/game_states.tres"
@@ -52,53 +53,63 @@ var _scene_transition_in_progress: bool = false
 ## Initialize the game manager
 ## Override this method to add custom initialization
 func _ready() -> void:
+	# Get LogManager reference
+
+	LogManager.info("GameManager", "GameManager initializing...")
 	_initialize_game()
 	_on_game_ready()
+	LogManager.info("GameManager", "GameManager ready")
 
 ## Initialize game systems
 ## Override this method to customize initialization
 func _initialize_game() -> void:
+	LogManager.debug("GameManager", "Loading state machine configuration...")
 	# Load state machine configuration
 	_load_state_definitions()
 	# Connect to scene tree signals
 	get_tree().node_added.connect(_on_node_added)
 	get_tree().node_removed.connect(_on_node_removed)
+	LogManager.debug("GameManager", "Game systems initialized")
 
 ## Load state definitions from Resource file
 ## Override this method to customize state loading
 func _load_state_definitions() -> void:
 	if states_config_path.is_empty():
-		push_error("GameManager: States config path is empty. Cannot initialize state machine.")
+		LogManager.error("GameManager", "States config path is empty. Cannot initialize state machine.")
 		return
-	
+
 	if not ResourceLoader.exists(states_config_path):
-		push_error("GameManager: States config resource not found: " + states_config_path + ". Cannot initialize state machine.")
+		LogManager.error("GameManager", "States config resource not found: " + states_config_path + ". Cannot initialize state machine.")
 		return
-	
+
+	LogManager.debug("GameManager", "Loading state config from: " + states_config_path)
+
 	# Load the state machine configuration resource
 	var config_resource: GameStateMachineConfig = null
 	var load_result = ResourceLoader.load(states_config_path) as GameStateMachineConfig
 	if load_result == null:
-		push_error("GameManager: Failed to load states config resource: " + states_config_path + ". Cannot initialize state machine.")
+		LogManager.error("GameManager", "Failed to load states config resource: " + states_config_path + ". Cannot initialize state machine.")
 		return
 	config_resource = load_result
-	
+
 	# Check if it's the right type (has the methods we need)
 	if not config_resource.has_method("validate") or not config_resource.has_method("get_state") or not config_resource.has_method("has_state"):
-		push_error("GameManager: Loaded resource is not a valid GameStateMachineConfig. Cannot initialize state machine.")
+		LogManager.error("GameManager", "Loaded resource is not a valid GameStateMachineConfig. Cannot initialize state machine.")
 		return
-	
+
 	# Validate the configuration
 	if not config_resource.validate():
-		push_error("GameManager: State machine configuration validation failed. Cannot initialize state machine.")
+		LogManager.error("GameManager", "State machine configuration validation failed. Cannot initialize state machine.")
 		return
-	
+
 	_state_config = config_resource
 	if config_resource.has_method("get") and config_resource.get("default_state") != null:
 		_default_state = config_resource.get("default_state")
 	else:
 		_default_state = "MENU"
-	
+
+	LogManager.info("GameManager", "State machine initialized with default state: " + _default_state)
+
 	# Set initial state
 	if current_state.is_empty():
 		current_state = _default_state
@@ -110,17 +121,18 @@ func _load_state_definitions() -> void:
 ## @param new_state: String name of the new state (must be defined in state machine config)
 func change_state(new_state: String) -> void:
 	if current_state == new_state:
+		LogManager.debug("GameManager", "State change ignored - already in state: " + new_state)
 		return
-	
+
 	if _state_config == null:
-		push_error("GameManager: State machine configuration not loaded")
+		LogManager.error("GameManager", "State machine configuration not loaded")
 		return
-	
+
 	# Validate state exists
 	if not _state_config.has_method("has_state") or not _state_config.has_state(new_state):
-		push_error("GameManager: Attempted to change to invalid state: " + new_state)
+		LogManager.error("GameManager", "Attempted to change to invalid state: " + new_state)
 		return
-	
+
 	# Validate transition is allowed
 	var current_state_def: GameStateDefinition = _state_config.get_state(current_state)
 	if current_state_def != null:
@@ -135,9 +147,10 @@ func change_state(new_state: String) -> void:
 			for item in allowed_transitions_val:
 				allowed_transitions.append(item)
 		if not allowed_transitions.is_empty() and not allowed_transitions.has(new_state):
-			push_warning("GameManager: Transition from '" + current_state + "' to '" + new_state + "' is not allowed")
+			LogManager.warn("GameManager", "Transition from '" + current_state + "' to '" + new_state + "' is not allowed")
 			return
-	
+
+	LogManager.info("GameManager", "Changing state: " + current_state + " -> " + new_state)
 	var old_state := current_state
 	current_state = new_state
 	# Handle state transition immediately (synchronous)
@@ -177,13 +190,15 @@ func _call_state_callback(callback_name: String, state_name: String) -> void:
 	if has_method(callback_name):
 		call(callback_name)
 	else:
-		push_warning("GameManager: State callback method '" + callback_name + "' not found for state '" + state_name + "'")
+		LogManager.warn("GameManager", "State callback method '" + callback_name + "' not found for state '" + state_name + "'")
 
 ## Pause the game
 ## Override this method to add custom pause logic
 func pause_game() -> void:
 	if is_paused:
+		LogManager.debug("GameManager", "Pause ignored - game already paused")
 		return
+	LogManager.info("GameManager", "Pausing game")
 	is_paused = true
 	change_state("PAUSED")
 
@@ -191,7 +206,9 @@ func pause_game() -> void:
 ## Override this method to add custom unpause logic
 func unpause_game() -> void:
 	if not is_paused:
+		LogManager.debug("GameManager", "Unpause ignored - game not paused")
 		return
+	LogManager.info("GameManager", "Unpausing game")
 	is_paused = false
 	change_state("PLAYING")
 
@@ -206,44 +223,55 @@ func toggle_pause() -> void:
 ## Override this method to add custom scene transition logic
 func change_scene(scene_path: String, transition_type: String = "") -> void:
 	if _scene_transition_in_progress:
-		push_warning("GameManager: Scene transition already in progress")
+		LogManager.warn("GameManager", "Scene transition already in progress")
 		return
-	
+
 	if not ResourceLoader.exists(scene_path):
-		push_error("GameManager: Scene path does not exist: " + scene_path)
+		LogManager.error("GameManager", "Scene path does not exist: " + scene_path)
 		return
-	
+
+	LogManager.info("GameManager", "Changing scene to: " + scene_path + (" with transition: " + transition_type if transition_type else ""))
+
 	_scene_transition_in_progress = true
 	_on_scene_change_started(scene_path, transition_type)
-	
+
 	# Perform transition if specified
 	if transition_type != "":
 		_perform_transition(scene_path, transition_type)
 	else:
-		get_tree().change_scene_to_file(scene_path)
-	
+		# Defer the actual scene swap to avoid \"Parent node is busy\" errors during _ready()/tree mutations.
+		get_tree().call_deferred("change_scene_to_file", scene_path)
+
+	# Always defer completion to ensure scene change happens first
+	call_deferred("_complete_scene_change", scene_path)
+
+## Complete scene change (called deferred after change_scene_to_file)
+func _complete_scene_change(scene_path: String) -> void:
 	current_scene_path = scene_path
 	_scene_transition_in_progress = false
 	scene_changed.emit(scene_path)
 	_on_scene_changed(scene_path)
+	LogManager.debug("GameManager", "Scene change completed")
 
 ## Perform scene transition
 ## Override this method to implement custom transitions
 func _perform_transition(scene_path: String, _transition_type: String) -> void:
 	# Default: immediate transition
 	# Override to add fade, slide, etc.
-	get_tree().change_scene_to_file(scene_path)
+	# Note: Completion is handled by the caller via _complete_scene_change
+	get_tree().call_deferred("change_scene_to_file", scene_path)
 
 ## Reload current scene
 func reload_current_scene() -> void:
 	if current_scene_path.is_empty():
-		push_warning("GameManager: No current scene to reload")
+		LogManager.warn("GameManager", "No current scene to reload")
 		return
 	change_scene(current_scene_path)
 
 ## Quit the game
 ## Override this method to add custom quit logic
 func quit_game() -> void:
+	LogManager.info("GameManager", "Game quitting...")
 	_on_game_quit()
 	game_quit.emit()
 	get_tree().quit()
@@ -251,6 +279,7 @@ func quit_game() -> void:
 ## Restart the game
 ## Override this method to add custom restart logic
 func restart_game() -> void:
+	LogManager.info("GameManager", "Game restarting...")
 	_on_game_restart()
 	# Reload the main scene
 	var main_scene_setting: Variant = ProjectSettings.get_setting("application/run/main_scene", "")
@@ -269,8 +298,8 @@ func _on_game_ready() -> void:
 
 ## Called when game state changes
 ## Override to handle state-specific logic
-func _on_state_changed(_old_state: String, _new_state: String) -> void:
-	pass
+func _on_state_changed(old_state: String, new_state: String) -> void:
+	LogManager.debug("GameManager", "State changed from '" + old_state + "' to '" + new_state + "'")
 
 ## Called when pause state changes
 ## Override to handle pause-specific logic
@@ -321,11 +350,13 @@ func _on_loading_started() -> void:
 ## Override to handle pause logic
 func _on_paused_entered() -> void:
 	is_paused = true
+	LogManager.debug("GameManager", "Entered paused state")
 
 ## Called when paused state is exited
 ## Override to handle unpause logic
 func _on_paused_exited() -> void:
 	is_paused = false
+	LogManager.debug("GameManager", "Exited paused state")
 
 ## Called when game is quitting
 ## Override to add cleanup logic

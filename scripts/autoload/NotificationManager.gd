@@ -31,11 +31,16 @@ var _notifications: Dictionary = {}  # id -> { "node": Control, "data": Dictiona
 var _notification_queue: Array[Dictionary] = []
 var _next_id: int = 0
 
+
 ## Initialize the notification manager
 ## Override this method to add custom initialization
 func _ready() -> void:
+	# Get LogManager reference
+
+	LogManager.info("NotificationManager", "NotificationManager initializing...")
 	_initialize_notification_manager()
 	_on_notification_manager_ready()
+	LogManager.info("NotificationManager", "NotificationManager ready")
 
 ## Initialize notification manager
 ## Override this method to customize initialization
@@ -47,11 +52,14 @@ func _initialize_notification_manager() -> void:
 ## Override this method to add custom notification logic
 func show_notification(message: String, type: NotificationType = NotificationType.INFO, duration: float = -1.0, data: Dictionary = {}) -> String:
 	if message.is_empty():
-		push_warning("NotificationManager: Cannot show empty notification")
+		LogManager.warn("NotificationManager", "Cannot show empty notification")
 		return ""
-	
+
+	LogManager.debug("NotificationManager", "Showing notification: '" + message.substr(0, 50) + "...'")
+
 	# Check if we're at max capacity
 	if _notifications.size() >= max_notifications:
+		LogManager.debug("NotificationManager", "Notification queued (at capacity)")
 		# Queue notification
 		_notification_queue.append({
 			"message": message,
@@ -67,7 +75,7 @@ func show_notification(message: String, type: NotificationType = NotificationTyp
 	# Create notification node
 	var notification_node := _create_notification_node(message, type, data)
 	if notification_node == null:
-		push_error("NotificationManager: Failed to create notification node")
+		LogManager.error("NotificationManager", "Failed to create notification node")
 		return ""
 	
 	# Add to scene tree
@@ -132,7 +140,8 @@ func hide_all_notifications() -> void:
 func _create_notification_node(message: String, type: NotificationType, data: Dictionary) -> Control:
 	# Create a simple label-based notification
 	# Override this to create custom notification UI
-	var panel := Panel.new()
+	var panel := PanelContainer.new()
+	var margin := MarginContainer.new()
 	var label := Label.new()
 	
 	# Configure panel
@@ -143,12 +152,18 @@ func _create_notification_node(message: String, type: NotificationType, data: Di
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.add_theme_constant_override("margin_left", 10)
-	label.add_theme_constant_override("margin_right", 10)
-	label.add_theme_constant_override("margin_top", 10)
-	label.add_theme_constant_override("margin_bottom", 10)
-	
-	panel.add_child(label)
+
+	# Ensure the label gets a real width (prevents per-character wrapping / vertical text).
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", 10)
+	margin.add_theme_constant_override("margin_right", 10)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_bottom", 10)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+
+	margin.add_child(label)
+	panel.add_child(margin)
 	
 	# Set style based on type
 	_set_notification_style(panel, type)
@@ -163,7 +178,7 @@ func _create_notification_node(message: String, type: NotificationType, data: Di
 
 ## Set notification style based on type
 ## Override this method to customize styling
-func _set_notification_style(_panel: Panel, _type: NotificationType) -> void:
+func _set_notification_style(_panel: Control, _type: NotificationType) -> void:
 	# Override to set custom styles
 	# This is a placeholder - implement actual styling
 	pass

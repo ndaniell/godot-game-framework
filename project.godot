@@ -11,20 +11,28 @@ config_version=5
 [application]
 
 config/name="Godot Game Framework"
+run/main_scene="res://scenes/fps/FpsMain.tscn"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
 
 [autoload]
 
+LogManager="*res://scripts/autoload/LogManager.gd"
 AudioManager="*res://scripts/autoload/AudioManager.gd"
-GameManager="*res://scripts/autoload/GameManager.gd"
+GameManager="*res://scripts/examples/fps/FpsGameManager.gd"
+NetworkManager="*res://scripts/autoload/NetworkManager.gd"
+NotificationManager="*res://scripts/autoload/NotificationManager.gd"
+PoolManager="*res://scripts/autoload/PoolManager.gd"
+ResourceManager="*res://scripts/autoload/ResourceManager.gd"
 SaveManager="*res://scripts/autoload/SaveManager.gd"
-InputManager="*res://scripts/autoload/InputManager.gd"
 SceneManager="*res://scripts/autoload/SceneManager.gd"
-UIManager="*res://scripts/autoload/UIManager.gd"
 SettingsManager="*res://scripts/autoload/SettingsManager.gd"
 EventManager="*res://scripts/autoload/EventManager.gd"
-ResourceManager="*res://scripts/autoload/ResourceManager.gd"
-PoolManager="*res://scripts/autoload/PoolManager.gd"
+InputManager="*res://scripts/examples/fps/FpsInputManager.gd"
 TimeManager="*res://scripts/autoload/TimeManager.gd"
-NotificationManager="*res://scripts/autoload/NotificationManager.gd"
+UIManager="*res://scripts/autoload/UIManager.gd"
+
+[debug]
+
+file_logging/enable_file_logging=true
+file_logging/log_path="user://logs/godot_game_framework.log"

@@ -9,8 +9,10 @@ signal event_emitted(event_name: String, data: Dictionary)
 signal listener_added(event_name: String)
 signal listener_removed(event_name: String)
 
+# Note: LogManager is accessed directly as an autoload singleton
+
 # Event listeners storage
-# Structure: event_name -> Array[Callable]
+# Structure: event_name -> Array[Callable>
 var _listeners: Dictionary = {}
 
 # Event history (optional, for debugging)
@@ -20,11 +22,17 @@ var _listeners: Dictionary = {}
 
 var _event_history: Array[Dictionary] = []
 
+# LogManager reference
+
 ## Initialize the event manager
 ## Override this method to add custom initialization
 func _ready() -> void:
+	# Get LogManager reference
+
+	LogManager.info("EventManager", "EventManager initializing...")
 	_initialize_event_manager()
 	_on_event_manager_ready()
+	LogManager.info("EventManager", "EventManager ready")
 
 ## Initialize event manager
 ## Override this method to customize initialization
@@ -35,21 +43,22 @@ func _initialize_event_manager() -> void:
 ## Override this method to add custom subscription logic
 func subscribe(event_name: String, callable: Callable) -> void:
 	if event_name.is_empty():
-		push_error("EventManager: Cannot subscribe to empty event name")
+		LogManager.error("EventManager", "Cannot subscribe to empty event name")
 		return
-	
+
 	if not callable.is_valid():
-		push_error("EventManager: Cannot subscribe with invalid callable")
+		LogManager.error("EventManager", "Cannot subscribe with invalid callable")
 		return
-	
+
 	# Initialize array if event doesn't exist
 	if not _listeners.has(event_name):
 		_listeners[event_name] = []
-	
+
 	# Add listener if not already present
 	var listeners := _listeners[event_name] as Array
 	if callable not in listeners:
 		listeners.append(callable)
+		LogManager.debug("EventManager", "Added listener for event: " + event_name)
 		listener_added.emit(event_name)
 		_on_listener_added(event_name, callable)
 
@@ -86,22 +95,25 @@ func unsubscribe_all(event_name: String) -> void:
 ## Override this method to add custom emission logic
 func emit(event_name: String, data: Dictionary = {}) -> void:
 	if event_name.is_empty():
-		push_warning("EventManager: Cannot emit empty event name")
+		LogManager.warn("EventManager", "Cannot emit empty event name")
 		return
-	
+
 	# Add to history if enabled
 	if enable_event_history:
 		_add_to_history(event_name, data)
-	
+
 	# Emit signal
 	event_emitted.emit(event_name, data)
-	
+
 	# Notify listeners
 	if _listeners.has(event_name):
 		var listeners := _listeners[event_name] as Array
+		var listener_count := listeners.size()
+		LogManager.trace("EventManager", "Emitting event '" + event_name + "' to " + str(listener_count) + " listener(s)")
+
 		# Create a copy to avoid issues if listeners modify the array
 		var listeners_copy := listeners.duplicate()
-		
+
 		for callable in listeners_copy:
 			if callable.is_valid():
 				# Call with data - GDScript callables can handle extra args being ignored
@@ -110,7 +122,9 @@ func emit(event_name: String, data: Dictionary = {}) -> void:
 			else:
 				# Remove invalid callables
 				listeners.erase(callable)
-	
+	else:
+		LogManager.trace("EventManager", "Emitted event '" + event_name + "' (no listeners)")
+
 	_on_event_emitted(event_name, data)
 
 ## Check if an event has listeners
@@ -159,11 +173,11 @@ func _add_to_history(event_name: String, data: Dictionary) -> void:
 ## Subscribe using a method name (convenience method)
 func subscribe_method(event_name: String, target: Object, method: String) -> void:
 	if target == null:
-		push_error("EventManager: Cannot subscribe with null target")
+		LogManager.error("EventManager", "Cannot subscribe with null target")
 		return
-	
+
 	if not target.has_method(method):
-		push_error("EventManager: Target does not have method: " + method)
+		LogManager.error("EventManager", "Target does not have method: " + method)
 		return
 	
 	var callable := Callable(target, method)

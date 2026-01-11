@@ -1,0 +1,101 @@
+[gd_scene load_steps=12 format=3 uid="uid://iibc5want5d8"]
+
+[ext_resource type="Script" uid="uid://eftdw6jrmvnb" path="res://scripts/examples/fps/player/PlayerController.gd" id="1_player_controller"]
+[ext_resource type="Script" uid="uid://bh6dtsgvol7ll" path="res://scripts/examples/fps/player/Weapon.gd" id="2_weapon_script"]
+
+[sub_resource type="CapsuleShape3D" id="1_capsule_shape"]
+radius = 0.35
+height = 1.2
+
+[sub_resource type="StandardMaterial3D" id="3_player_body_mat"]
+albedo_color = Color(0.15, 0.55, 0.95, 1)
+metallic = 0.1
+roughness = 0.65
+
+[sub_resource type="CapsuleMesh" id="2_capsule_mesh"]
+radius = 0.35
+height = 1.2
+
+[sub_resource type="StandardMaterial3D" id="5_head_mat"]
+albedo_color = Color(0.95, 0.8, 0.7, 1)
+roughness = 0.9
+
+[sub_resource type="SphereMesh" id="4_head_mesh"]
+radius = 0.18
+height = 0.36
+
+[sub_resource type="StandardMaterial3D" id="7_arm_mat"]
+albedo_color = Color(0.2, 0.2, 0.22, 1)
+metallic = 0.05
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="6_arm_mesh"]
+size = Vector3(0.12, 0.12, 0.45)
+
+[sub_resource type="StandardMaterial3D" id="4_gun_mat"]
+albedo_color = Color(0.12, 0.12, 0.12, 1)
+metallic = 0.35
+roughness = 0.45
+
+[sub_resource type="BoxMesh" id="3_gun_mesh"]
+size = Vector3(0.28, 0.12, 0.7)
+
+[node name="Player" type="CharacterBody3D"]
+script = ExtResource("1_player_controller")
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.66627234, 0)
+shape = SubResource("1_capsule_shape")
+
+[node name="BodyMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.66627234, 0)
+material_override = SubResource("3_player_body_mat")
+mesh = SubResource("2_capsule_mesh")
+
+[node name="Head" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+
+[node name="HeadMesh" type="MeshInstance3D" parent="Head"]
+material_override = SubResource("5_head_mat")
+mesh = SubResource("4_head_mesh")
+
+[node name="Camera" type="Camera3D" parent="Head"]
+
+[node name="ArmsViewModel" type="Node3D" parent="Head/Camera"]
+
+[node name="ArmLeft" type="MeshInstance3D" parent="Head/Camera/ArmsViewModel"]
+transform = Transform3D(1, 0, 0, 0, 0.965926, 0.258819, 0, -0.258819, 0.965926, -0.22, -0.32, -0.55)
+visible = false
+material_override = SubResource("7_arm_mat")
+cast_shadow = 0
+mesh = SubResource("6_arm_mesh")
+
+[node name="ArmRight" type="MeshInstance3D" parent="Head/Camera/ArmsViewModel"]
+transform = Transform3D(1, 0, 0, 0, 0.965926, 0.258819, 0, -0.258819, 0.965926, 0.22, -0.32, -0.55)
+visible = false
+material_override = SubResource("7_arm_mat")
+cast_shadow = 0
+mesh = SubResource("6_arm_mesh")
+
+[node name="GunViewModel" type="MeshInstance3D" parent="Head/Camera"]
+transform = Transform3D(0.984808, 0.0301537, -0.17101, 0, 0.984808, 0.173648, 0.173648, -0.17101, 0.969846, 0.26, -0.22, -0.62)
+visible = false
+material_override = SubResource("4_gun_mat")
+cast_shadow = 0
+mesh = SubResource("3_gun_mesh")
+
+[node name="ThirdPersonArm" type="SpringArm3D" parent="Head"]
+spring_length = 3.5
+margin = 0.12
+
+[node name="ThirdPersonCamera" type="Camera3D" parent="Head/ThirdPersonArm"]
+
+[node name="WorldGunPivot" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.28, 1.1, -0.55)
+
+[node name="WorldGun" type="MeshInstance3D" parent="WorldGunPivot"]
+material_override = SubResource("4_gun_mat")
+mesh = SubResource("3_gun_mesh")
+
+[node name="Weapon" type="Node" parent="."]
+script = ExtResource("2_weapon_script")
