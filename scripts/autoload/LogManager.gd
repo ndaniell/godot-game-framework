@@ -31,9 +31,23 @@ enum LogLevel {
 @export var ring_buffer_size: int = 1000
 @export var enable_ring_buffer: bool = true
 
+# File logging configuration
+@export var enable_file_logging: bool = true
+@export var log_directory: String = "user://logs"
+@export var log_filename_pattern: String = "{project}_{instance}.log"
+
 # Internal state
 var _ring_buffer: Array[Dictionary] = []
 var _buffer_mutex: Mutex = Mutex.new()
+
+# Instance identification for multi-instance logging
+var _instance_tag: String = ""
+var _peer_id: int = 0
+var _is_server: bool = false
+
+# File logging state
+var _log_file: FileAccess
+var _log_file_path: String = ""
 
 # Custom logger implementation
 class GameLogger extends Logger:
@@ -153,6 +167,12 @@ class GameLogger extends Logger:
 
 ## Initialize the log manager
 func _init() -> void:
+	# Generate instance tag (PID by default, can be overridden)
+	_instance_tag = "pid=%d" % OS.get_process_id()
+
+	# Initialize file logging
+	_initialize_file_logging()
+
 	# Register custom logger for capturing engine messages
 	OS.add_logger(GameLogger.new(self))
 
@@ -160,6 +180,38 @@ func _init() -> void:
 	_ring_buffer = []
 
 	info("LogManager", "LogManager initialized with level: %s" % LogLevel.keys()[current_level])
+
+## Initialize file logging
+func _initialize_file_logging() -> void:
+	if not enable_file_logging:
+		return
+
+	# Create logs directory if it doesn't exist
+	var dir := DirAccess.open("user://")
+	if dir and not dir.dir_exists("logs"):
+		dir.make_dir("logs")
+
+	# Generate log file path
+	var project_name := ProjectSettings.get_setting("application/config/name", "godot_game_framework") as String
+	project_name = project_name.replace(" ", "_").to_lower()
+
+	_log_file_path = log_filename_pattern.format({
+		"project": project_name,
+		"instance": _instance_tag.replace("=", "_").replace(" ", "_")
+	})
+	_log_file_path = log_directory.path_join(_log_file_path)
+
+	# Open log file for writing
+	_log_file = FileAccess.open(_log_file_path, FileAccess.WRITE)
+	if _log_file:
+		info("LogManager", "File logging initialized: " + _log_file_path)
+	else:
+		warn("LogManager", "Failed to open log file: " + _log_file_path + " (error: " + str(FileAccess.get_open_error()) + ")")
+
+## Update peer ID and server status for logging context
+func update_network_context(peer_id: int = 0, is_server: bool = false) -> void:
+	_peer_id = peer_id
+	_is_server = is_server
 
 ## Log a trace message
 func trace(category: String, message: String) -> void:
@@ -189,7 +241,16 @@ func error(category: String, message: String) -> void:
 func _log(level: LogLevel, category: String, message: String) -> void:
 	var level_name: String = LogLevel.keys()[level]
 	var timestamp := Time.get_time_string_from_system()
-	var formatted_message := "[%s] [%s] %s: %s" % [timestamp, level_name, category, message]
+
+	# Build instance/peer/role prefix
+	var prefix_parts: Array[String] = [_instance_tag]
+	if _peer_id > 0:
+		var role := "server" if _is_server else "client"
+		prefix_parts.append("peer=%d" % _peer_id)
+		prefix_parts.append("role=%s" % role)
+	var prefix := "[" + " ".join(prefix_parts) + "] "
+
+	var formatted_message := "[%s] [%s] %s%s: %s" % [timestamp, level_name, prefix, category, message]
 
 	# Route based on level
 	match level:
@@ -203,6 +264,11 @@ func _log(level: LogLevel, category: String, message: String) -> void:
 			push_warning(formatted_message)
 		LogLevel.ERROR:
 			push_error(formatted_message)
+
+	# Write to file if enabled
+	if enable_file_logging and _log_file:
+		_log_file.store_line(formatted_message)
+		_log_file.flush()  # Ensure immediate write
 
 	# Add to ring buffer
 	if enable_ring_buffer:
@@ -250,3 +316,9 @@ func set_level_by_name(level_name: String) -> bool:
 ## Called when log level changes
 func _on_level_changed(_new_level: LogLevel) -> void:
 	info("LogManager", "Log level changed to: %s" % get_level_name())
+
+func _exit_tree() -> void:
+	# Clean up file logging
+	if _log_file:
+		_log_file.close()
+		_log_file = null

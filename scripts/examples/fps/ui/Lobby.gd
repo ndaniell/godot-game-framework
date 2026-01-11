@@ -70,14 +70,14 @@ func _on_network_changed(_data: Dictionary) -> void:
 	_refresh_players()
 
 func _refresh_buttons() -> void:
-	var connected := multiplayer.multiplayer_peer != null
-	var is_server := connected and multiplayer.is_server()
+	var connected := NetworkManager and NetworkManager.is_network_connected()
+	var is_server := connected and NetworkManager.is_host()
 	_start_match_button.disabled = not is_server
 	_disconnect_button.disabled = not connected
 
 func _refresh_players() -> void:
 	_players_list.clear()
-	if multiplayer.multiplayer_peer == null:
+	if not NetworkManager or not NetworkManager.is_network_connected():
 		_players_list.add_item("Offline")
 		return
 

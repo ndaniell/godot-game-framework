@@ -26,17 +26,28 @@ func _ready() -> void:
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 
-	if multiplayer.is_server():
+	# Connect to NetworkManager signals for arena ready coordination
+	_connect_network_manager_signals()
+
+	if multiplayer.multiplayer_peer and multiplayer.is_server():
 		# Spawn host player immediately. Other peers will be spawned after they confirm Arena01 is loaded.
 		_spawn_for_peer(1)
+		# Mark the host's arena as ready (server-side tracking)
+		if NetworkManager:
+			NetworkManager.report_local_arena_ready()
 		for peer_id in multiplayer.get_peers():
 			_pending_ready[int(peer_id)] = true
 	else:
-		# Tell the server we're ready so it can safely spawn our player via MultiplayerSpawner.
-		if multiplayer.multiplayer_peer != null:
-			_rpc_arena_ready.rpc_id(1)
+		# Tell NetworkManager we're ready so it can safely spawn our player via MultiplayerSpawner.
+		if NetworkManager and multiplayer.multiplayer_peer != null:
+			NetworkManager._rpc_report_arena_ready.rpc_id(1)
 
 func _exit_tree() -> void:
+	# Disconnect NetworkManager signals to prevent accumulation on scene reload
+	if NetworkManager:
+		if NetworkManager.arena_ready.is_connected(_on_peer_arena_ready):
+			NetworkManager.arena_ready.disconnect(_on_peer_arena_ready)
+
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	if UIManager:
 		UIManager.unregister_ui_element("fps_hud")
@@ -46,8 +57,8 @@ func _exit_tree() -> void:
 func _on_peer_connected(peer_id: int) -> void:
 	if EventManager:
 		EventManager.emit("peer_joined", {"peer_id": peer_id})
-	if multiplayer.is_server():
-		# Wait for the client to load Arena01, otherwise MultiplayerSpawner sync will fail on their side.
+	if multiplayer.multiplayer_peer and multiplayer.is_server():
+		# Wait for the client to report arena ready via NetworkManager, otherwise MultiplayerSpawner sync will fail.
 		_pending_ready[peer_id] = true
 
 func _on_peer_disconnected(peer_id: int) -> void:
@@ -67,17 +78,18 @@ func _spawn_for_peer(peer_id: int) -> void:
 	# Data travels to all peers; each creates the node locally using spawn_function.
 	_spawner.spawn({"peer_id": peer_id})
 
-@rpc("any_peer", "reliable")
-func _rpc_arena_ready() -> void:
-	if not multiplayer.is_server():
+# Connect to NetworkManager's arena_ready signal instead of direct RPC
+func _connect_network_manager_signals() -> void:
+	if NetworkManager:
+		NetworkManager.arena_ready.connect(_on_peer_arena_ready)
+
+func _on_peer_arena_ready(peer_id: int) -> void:
+	if not multiplayer.multiplayer_peer or not multiplayer.is_server():
 		return
-	var sender := multiplayer.get_remote_sender_id()
-	if sender <= 0:
+	if not _pending_ready.has(peer_id):
 		return
-	if not _pending_ready.has(sender):
-		return
-	_pending_ready.erase(sender)
-	_spawn_for_peer(sender)
+	_pending_ready.erase(peer_id)
+	_spawn_for_peer(peer_id)
 
 func _spawn_player(data: Variant) -> Node:
 	var d := data as Dictionary

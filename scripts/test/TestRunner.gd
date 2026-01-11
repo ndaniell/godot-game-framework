@@ -23,8 +23,12 @@ var test_registry: RefCounted
 
 func _ready() -> void:
 	# Wait for all managers to be ready
-	await get_tree().process_frame
-	await get_tree().process_frame
+	var tree = get_tree()
+	if tree:
+		await tree.process_frame
+		# Only wait one frame in headless mode
+		if not DisplayServer.get_name() == "headless":
+			await tree.process_frame
 	
 	# Initialize test framework
 	var framework_script = load("res://scripts/test/TestFramework.gd")
@@ -47,7 +51,7 @@ func _ready() -> void:
 	# Register default test suites
 	if discover_tests:
 		_register_default_test_suites()
-	
+
 	if auto_run_on_ready:
 		run_all_tests()
 

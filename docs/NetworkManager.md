@@ -64,6 +64,11 @@ signal session_event_received(event_name: StringName, data: Dictionary)
 ```
 Emitted when receiving a session event from server.
 
+```gdscript
+signal arena_ready(peer_id: int)
+```
+Emitted when a peer reports its level/arena is loaded and ready for gameplay.
+
 ## Methods
 
 ### Connection Management
@@ -123,6 +128,27 @@ Broadcast a custom event to all connected peers (server only).
 
 Send a custom event to a specific peer (server only).
 
+### Arena Ready Coordination
+
+#### `report_local_arena_ready() -> void`
+
+Mark the local (host) arena as loaded and ready. Should be called after level loading completes.
+
+#### `is_peer_arena_ready(peer_id: int) -> bool`
+
+Check if a specific peer has reported arena ready.
+
+**Parameters:**
+- `peer_id`: Peer ID to check
+
+**Returns:** true if peer has reported ready
+
+#### `get_ready_peers() -> Array[int]`
+
+Get all peer IDs that have reported arena ready.
+
+**Returns:** Array of ready peer IDs
+
 ## Usage Examples
 
 ### Basic Hosting
@@ -178,6 +204,36 @@ func _on_session_event(event_name: StringName, data: Dictionary) -> void:
             _update_scoreboard(data["player_id"], data["total_score"])
         "game_ended":
             _show_game_over_screen()
+```
+
+### Arena Ready Coordination
+
+```gdscript
+# In level/arena loading script (e.g., Arena01.gd)
+func _ready() -> void:
+    # Load level assets, setup scene
+    await load_level_assets()
+
+    # Report arena ready to coordinate with other peers
+    if NetworkManager:
+        if multiplayer.is_server():
+            NetworkManager.report_local_arena_ready()
+        else:
+            NetworkManager._rpc_report_arena_ready.rpc_id(1)
+
+# Server-side: wait for peers before starting gameplay
+func _on_peer_joined(peer_id: int) -> void:
+    _pending_peers[peer_id] = true
+
+func _on_arena_ready(peer_id: int) -> void:
+    if _pending_peers.has(peer_id):
+        _pending_peers.erase(peer_id)
+        # Spawn player for this peer
+        spawn_player_for_peer(peer_id)
+
+        # Check if all peers are ready to start match
+        if _pending_peers.is_empty():
+            start_gameplay()
 ```
 
 ## Integration

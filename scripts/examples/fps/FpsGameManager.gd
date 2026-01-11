@@ -3,6 +3,10 @@ extends "res://scripts/autoload/GameManager.gd"
 const SCENE_FPS_MAIN := "res://scenes/fps/FpsMain.tscn"
 const SCENE_ARENA := "res://scenes/fps/levels/Arena01.tscn"
 
+# Late-join queueing during arena loading transitions
+var _arena_loading_in_progress: bool = false
+var _queued_late_joiners: Array[int] = []
+
 func _ready() -> void:
 	LogManager.info("FpsGameManager", "FpsGameManager initializing...")
 	super._ready()
@@ -36,7 +40,17 @@ func _on_state_changed(old_state: String, new_state: String) -> void:
 				change_scene(SCENE_FPS_MAIN, "fade")
 		"PLAYING":
 			if current_scene_path != SCENE_ARENA:
+				# Mark that arena loading is in progress
+				_arena_loading_in_progress = true
 				change_scene(SCENE_ARENA, "fade")
+
+func _on_scene_changed(scene_path: String) -> void:
+	super._on_scene_changed(scene_path)
+
+	# If the arena just finished loading, process any queued late joiners
+	if scene_path == SCENE_ARENA and _arena_loading_in_progress:
+		_arena_loading_in_progress = false
+		_process_queued_late_joiners()
 
 func _on_match_start(_data: Dictionary) -> void:
 	# Fired by NetworkManager.broadcast_session_event from the host; all peers receive it.
@@ -54,5 +68,22 @@ func _on_peer_joined(data: Dictionary) -> void:
 	var peer_id := int(data.get("peer_id", 0))
 	if peer_id <= 0:
 		return
-	if NetworkManager:
+
+	# If arena is still loading, queue the peer for later
+	if _arena_loading_in_progress:
+		_queued_late_joiners.append(peer_id)
+		LogManager.debug("FpsGameManager", "Queued late joiner " + str(peer_id) + " (arena loading in progress)")
+	else:
+		# Arena is ready, send match start immediately
+		if NetworkManager:
+			NetworkManager.send_session_event_to_peer(peer_id, &"fps_match_start", {})
+
+func _process_queued_late_joiners() -> void:
+	if not multiplayer.multiplayer_peer or not multiplayer.is_server() or not NetworkManager:
+		return
+
+	LogManager.debug("FpsGameManager", "Processing " + str(_queued_late_joiners.size()) + " queued late joiners")
+	for peer_id in _queued_late_joiners:
 		NetworkManager.send_session_event_to_peer(peer_id, &"fps_match_start", {})
+
+	_queued_late_joiners.clear()

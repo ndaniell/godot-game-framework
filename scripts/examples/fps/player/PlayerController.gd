@@ -34,6 +34,24 @@ var _srv_look: Vector2 = Vector2.ZERO
 var _srv_jump: bool = false
 var _srv_fire: bool = false
 
+# Prediction + reconciliation state
+var _input_sequence: int = 0
+var _last_processed_sequence: int = 0
+
+# Server-side: last sequence processed per client (for reconciliation)
+var _last_client_sequence: int = 0
+
+# Client prediction buffers
+var _pending_inputs: Array[Dictionary] = []  # {seq, move, look, jump, fire, timestamp}
+var _prediction_states: Array[Dictionary] = []  # {seq, position, yaw, pitch, velocity}
+
+# Server snapshots for reconciliation
+var _server_snapshots: Array[Dictionary] = []  # {seq, position, yaw, pitch, velocity, timestamp}
+
+# Remote player interpolation
+var _remote_target_state: Dictionary = {}  # Server state to interpolate toward
+var _remote_interp_t: float = 1.0  # Interpolation parameter (1.0 = at target)
+
 @onready var _head: Node3D = $Head
 @onready var _camera_fp: Camera3D = $Head/Camera
 @onready var _camera_tp: Camera3D = $Head/ThirdPersonArm/ThirdPersonCamera
@@ -117,17 +135,58 @@ func _process(_delta: float) -> void:
 			])
 		EventManager.emit("fps_shot_fired", {})
 
-	# Host (peer 1) can't RPC to itself in this mode; call directly when we're the server.
+	# Client prediction: simulate locally first, then send to server
 	var look_vec: Vector2 = _cli_look if _cli_look != null else Vector2.ZERO
+	var input_data := {
+		"move": _cli_move,
+		"look": look_vec,
+		"jump": _cli_jump,
+		"fire": _cli_fire
+	}
+
+	# Client prediction: simulate locally for immediate feedback
+	if multiplayer.get_unique_id() == owner_peer_id and not multiplayer.is_server():
+		_client_predict(input_data)
+
+	# Send to server (increment sequence number)
+	_input_sequence += 1
+	var current_sequence := _input_sequence
+
+	# Store input for potential reconciliation
+	_pending_inputs.append({
+		"seq": current_sequence,
+		"move": _cli_move,
+		"look": look_vec,
+		"jump": _cli_jump,
+		"fire": _cli_fire,
+		"timestamp": Time.get_ticks_msec()
+	})
+
+	# Send to server
 	if multiplayer.is_server():
-		_server_update_input(_cli_move, look_vec, _cli_jump, _cli_fire)
+		_server_update_input(current_sequence, _cli_move, look_vec, _cli_jump, _cli_fire)
 	else:
-		_server_update_input.rpc_id(1, _cli_move, look_vec, _cli_jump, _cli_fire)
+		_server_update_input.rpc_id(1, current_sequence, _cli_move, look_vec, _cli_jump, _cli_fire)
 
 	# Clear one-frame input on the client side (don't touch _srv_*; server consumes those).
 	_cli_look = Vector2.ZERO
 	_cli_jump = false
 	_cli_fire = false
+
+	# Remote player smoothing: interpolate toward server state
+	if multiplayer.get_unique_id() != owner_peer_id and not _remote_target_state.is_empty():
+		_remote_interp_t = min(_remote_interp_t + _delta * 10.0, 1.0)  # Smooth over ~100ms
+		if _remote_interp_t < 1.0:
+			var current_state: Dictionary = _get_current_state()
+			var interp_position: Vector3 = current_state.position.lerp(_remote_target_state.position, _remote_interp_t)
+			var interp_yaw: float = lerp_angle(current_state.yaw, _remote_target_state.yaw, _remote_interp_t)
+			var interp_pitch: float = lerp(current_state.pitch, _remote_target_state.pitch, _remote_interp_t)
+
+			global_position = interp_position
+			_yaw = interp_yaw
+			_pitch = interp_pitch
+			rotation.y = _yaw
+			_head.rotation.x = _pitch
 
 func _toggle_view() -> void:
 	if _view_mode == ViewMode.FIRST_PERSON:
@@ -167,8 +226,147 @@ func _set_viewmodel_visible(visible_now: bool) -> void:
 	if _gun_viewmodel:
 		_gun_viewmodel.visible = visible_now
 
+# Shared simulation step (deterministic, used by both prediction and server authority)
+func _simulate_step(delta: float, input: Dictionary, current_state: Dictionary) -> Dictionary:
+	var new_state := current_state.duplicate()
+
+	# Look rotation
+	new_state.yaw -= input.look.x
+	new_state.pitch = clamp(new_state.pitch - input.look.y, -1.3, 1.3)
+
+	# Movement
+	if not is_on_floor():
+		new_state.velocity.y -= ProjectSettings.get_setting("physics/3d/default_gravity") * delta
+
+	var dir3 := Vector3(input.move.x, 0.0, input.move.y)
+	if dir3.length() > 0.0:
+		# Create a temporary transform to get the correct movement direction
+		var temp_transform := Transform3D()
+		temp_transform = temp_transform.rotated(Vector3.UP, new_state.yaw)
+		dir3 = (temp_transform.basis * dir3).normalized()
+		new_state.velocity.x = dir3.x * move_speed
+		new_state.velocity.z = dir3.z * move_speed
+
+	if input.jump and is_on_floor():
+		new_state.velocity.y = jump_velocity
+
+	# Simple position integration (we'll handle collision in the calling context)
+	new_state.position += new_state.velocity * delta
+
+	return new_state
+
+# Get current simulation state
+func _get_current_state() -> Dictionary:
+	return {
+		"position": global_position,
+		"yaw": _yaw,
+		"pitch": _pitch,
+		"velocity": velocity
+	}
+
+# Apply a simulation state
+func _apply_state(state: Dictionary) -> void:
+	global_position = state.position
+	_yaw = state.yaw
+	_pitch = state.pitch
+	rotation.y = _yaw
+	_head.rotation.x = _pitch
+	velocity = state.velocity
+
+# Client prediction: simulate locally for immediate feedback
+func _client_predict(input: Dictionary) -> void:
+	var delta := get_physics_process_delta_time()
+	var current_state := _get_current_state()
+
+	# Simulate the step
+	var new_state := _simulate_step(delta, input, current_state)
+
+	# Apply the predicted state
+	_apply_state(new_state)
+
+	# Store prediction state for potential reconciliation
+	_prediction_states.append({
+		"seq": _input_sequence + 1,  # This prediction is for the next sequence
+		"position": new_state.position,
+		"yaw": new_state.yaw,
+		"pitch": new_state.pitch,
+		"velocity": new_state.velocity
+	})
+
+	# Keep prediction buffer bounded
+	if _prediction_states.size() > 60:  # ~1 second at 60fps
+		_prediction_states.pop_front()
+
+# Server sends authoritative snapshots back to clients
+@rpc("any_peer", "unreliable", "call_local")
+func _receive_server_snapshot(sequence: int, snapshot_position: Vector3, yaw: float, pitch: float, snapshot_velocity: Vector3) -> void:
+	if multiplayer.get_unique_id() != owner_peer_id:
+		return
+
+	var snapshot := {
+		"seq": sequence,
+		"position": snapshot_position,
+		"yaw": yaw,
+		"pitch": pitch,
+		"velocity": snapshot_velocity,
+		"timestamp": Time.get_ticks_msec()
+	}
+
+	_server_snapshots.append(snapshot)
+
+	# Keep snapshot buffer bounded
+	if _server_snapshots.size() > 32:
+		_server_snapshots.pop_front()
+
+	# Reconcile with latest snapshot
+	_reconcile_with_server()
+
+# Client reconciliation: rewind and replay from authoritative server state
+func _reconcile_with_server() -> void:
+	if _server_snapshots.is_empty():
+		return
+
+	# Find the most recent snapshot
+	var latest_snapshot: Dictionary = _server_snapshots.back()
+
+	# Find the corresponding prediction state
+	var prediction_index := -1
+	for i in range(_prediction_states.size()):
+		if _prediction_states[i].seq == latest_snapshot.seq:
+			prediction_index = i
+			break
+
+	if prediction_index == -1:
+		# No matching prediction, just apply the snapshot
+		_apply_state(latest_snapshot)
+		_last_processed_sequence = latest_snapshot.seq
+		return
+
+	# Apply the authoritative state
+	_apply_state(latest_snapshot)
+	_last_processed_sequence = latest_snapshot.seq
+
+	# Remove processed snapshots and predictions
+	_server_snapshots.clear()
+	while not _prediction_states.is_empty() and _prediction_states[0].seq <= latest_snapshot.seq:
+		_prediction_states.pop_front()
+
+	# Remove processed inputs
+	while not _pending_inputs.is_empty() and _pending_inputs[0].seq <= latest_snapshot.seq:
+		_pending_inputs.pop_front()
+
+	# Replay unprocessed inputs from the authoritative state
+	var current_state: Dictionary = latest_snapshot
+	var delta := get_physics_process_delta_time()
+
+	for input_data in _pending_inputs:
+		current_state = _simulate_step(delta, input_data, current_state)
+
+	# Apply the reconciled state
+	_apply_state(current_state)
+
 @rpc("any_peer", "unreliable")
-func _server_update_input(move: Vector2, look: Vector2, jump_pressed: bool, fire_pressed: bool) -> void:
+func _server_update_input(sequence: int, move: Vector2, look: Vector2, jump_pressed: bool, fire_pressed: bool) -> void:
 	if not multiplayer.is_server():
 		return
 	var sender := multiplayer.get_remote_sender_id()
@@ -177,6 +375,21 @@ func _server_update_input(move: Vector2, look: Vector2, jump_pressed: bool, fire
 		sender = owner_peer_id
 	if sender != owner_peer_id:
 		return
+
+	# Store the client's sequence for reconciliation snapshots
+	_last_client_sequence = sequence
+
+	# Store input for processing
+	var _input_data := {
+		"sequence": sequence,
+		"move": move,
+		"look": look,
+		"jump": jump_pressed,
+		"fire": fire_pressed,
+		"timestamp": Time.get_ticks_msec()
+	}
+
+	# Process input immediately on server
 	_srv_move = move
 	_srv_look = look
 	_srv_jump = jump_pressed
@@ -209,10 +422,32 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 
+	# Send periodic snapshots to owning client for reconciliation
+	if multiplayer.get_unique_id() != owner_peer_id:  # Only for remote players
+		_send_snapshot_to_client()
+
+	# For remote players, store server state for interpolation
+	if multiplayer.get_unique_id() != owner_peer_id:
+		_remote_target_state = _get_current_state()
+		_remote_interp_t = 0.0
+
 	if _srv_fire:
 		_srv_fire = false
 		LogManager.debug("PlayerController", "server processing fire (peer=%d owner=%d)" % [multiplayer.get_unique_id(), owner_peer_id])
 		_try_fire()
+
+# Send authoritative state snapshots to the owning client
+func _send_snapshot_to_client() -> void:
+	if owner_peer_id <= 0 or owner_peer_id == multiplayer.get_unique_id():
+		return
+
+	_receive_server_snapshot.rpc_id(owner_peer_id,
+		_last_client_sequence,  # Send the client's sequence for proper reconciliation
+		global_position,
+		_yaw,
+		_pitch,
+		velocity
+	)
 
 func _try_fire() -> void:
 	if _weapon and _weapon.has_method("try_consume_shot"):

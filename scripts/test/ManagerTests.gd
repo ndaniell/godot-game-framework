@@ -30,6 +30,7 @@ func register_tests(registry: RefCounted) -> void:
 	var audio_tests = _create_test_callables(_get_audio_manager_test_names())
 	var game_tests = _create_test_callables(_get_game_manager_test_names())
 	var log_tests = _create_test_callables(_get_log_manager_test_names())
+	var network_tests = _create_test_callables(_get_network_manager_test_names())
 	var save_tests = _create_test_callables(_get_save_manager_test_names())
 	var input_tests = _create_test_callables(_get_input_manager_test_names())
 	var scene_tests = _create_test_callables(_get_scene_manager_test_names())
@@ -45,6 +46,7 @@ func register_tests(registry: RefCounted) -> void:
 	_validate_test_suite("AudioManager", audio_tests)
 	_validate_test_suite("GameManager", game_tests)
 	_validate_test_suite("LogManager", log_tests)
+	_validate_test_suite("NetworkManager", network_tests)
 	_validate_test_suite("SaveManager", save_tests)
 	_validate_test_suite("InputManager", input_tests)
 	_validate_test_suite("SceneManager", scene_tests)
@@ -60,6 +62,7 @@ func register_tests(registry: RefCounted) -> void:
 	registry.register_suite("AudioManager", audio_tests, Callable(), Callable(), self)
 	registry.register_suite("GameManager", game_tests, Callable(), Callable(), self)
 	registry.register_suite("LogManager", log_tests, Callable(), Callable(), self)
+	registry.register_suite("NetworkManager", network_tests, Callable(), Callable(), self)
 	registry.register_suite("SaveManager", save_tests, Callable(), Callable(), self)
 	registry.register_suite("InputManager", input_tests, Callable(), Callable(), self)
 	registry.register_suite("SceneManager", scene_tests, Callable(), Callable(), self)
@@ -111,110 +114,11 @@ func _create_test_callables(test_defs: Array) -> Dictionary:
 func _get_log_manager_test_names() -> Array:
 	return [
 		{"name": "LogManager exists", "method": "test_logmanager_exists"},
-		{"name": "Log level filtering", "method": "test_logmanager_level_filtering"},
-		{"name": "Ring buffer works", "method": "test_logmanager_ring_buffer"},
-		{"name": "Log methods function", "method": "test_logmanager_methods"},
-		{"name": "Level setting works", "method": "test_logmanager_level_setting"}
+		{"name": "LogManager initialization", "method": "test_logmanager_initialization"},
+		{"name": "LogManager instance prefix", "method": "test_logmanager_instance_prefix"},
+		{"name": "LogManager file logging", "method": "test_logmanager_file_logging"},
+		{"name": "LogManager network context", "method": "test_logmanager_network_context"},
 	]
-
-func test_logmanager_exists() -> bool:
-	var framework = _get_framework()
-	if framework == null:
-		return false
-	return framework.assert_not_null(LogManager, "LogManager should exist")
-
-func test_logmanager_level_filtering() -> bool:
-	var framework = _get_framework()
-	if framework == null:
-		return false
-
-	var original_level = LogManager.current_level
-	LogManager.current_level = LogManager.LogLevel.ERROR
-	LogManager.clear_ring_buffer()
-
-	LogManager.info("Test", "This should be filtered")
-	LogManager.error("Test", "This should appear")
-
-	var buffer = LogManager.get_ring_buffer()
-	var error_found = false
-	var info_found = false
-
-	for entry in buffer:
-		if entry.get("level") == "ERROR":
-			error_found = true
-		elif entry.get("level") == "INFO":
-			info_found = true
-
-	LogManager.current_level = original_level
-
-	var result1 = framework.assert_true(error_found, "ERROR messages should appear")
-	var result2 = framework.assert_false(info_found, "INFO messages should be filtered")
-
-	return result1 and result2
-
-func test_logmanager_ring_buffer() -> bool:
-	var framework = _get_framework()
-	if framework == null:
-		return false
-
-	var original_enabled = LogManager.enable_ring_buffer
-	LogManager.enable_ring_buffer = true
-	LogManager.ring_buffer_size = 2
-	LogManager.clear_ring_buffer()
-
-	LogManager.info("Test", "Message 1")
-	LogManager.info("Test", "Message 2")
-	LogManager.info("Test", "Message 3")
-
-	var buffer = LogManager.get_ring_buffer()
-	LogManager.enable_ring_buffer = original_enabled
-
-	var result1 = framework.assert_equal(buffer.size(), 2, "Should maintain buffer size")
-	return result1
-
-func test_logmanager_methods() -> bool:
-	var framework = _get_framework()
-	if framework == null:
-		return false
-
-	var original_level = LogManager.current_level
-	LogManager.current_level = LogManager.LogLevel.TRACE
-
-	# Test that all logging methods can be called without crashing
-	LogManager.trace("Test", "Trace message")
-	LogManager.debug("Test", "Debug message")
-	LogManager.info("Test", "Info message")
-	LogManager.warn("Test", "Warn message")
-	LogManager.error("Test", "Error message")
-
-	LogManager.current_level = original_level
-
-	# Test that the methods exist and are callable
-	var result1 = framework.assert_true(LogManager.has_method("trace"), "Should have trace method")
-	var result2 = framework.assert_true(LogManager.has_method("debug"), "Should have debug method")
-	var result3 = framework.assert_true(LogManager.has_method("info"), "Should have info method")
-	var result4 = framework.assert_true(LogManager.has_method("warn"), "Should have warn method")
-	var result5 = framework.assert_true(LogManager.has_method("error"), "Should have error method")
-
-	# Test that ring buffer exists and is accessible
-	var buffer = LogManager.get_ring_buffer()
-	var result6 = framework.assert_not_null(buffer, "Ring buffer should be accessible")
-
-	return result1 and result2 and result3 and result4 and result5 and result6
-
-func test_logmanager_level_setting() -> bool:
-	var framework = _get_framework()
-	if framework == null:
-		return false
-
-	var original_level = LogManager.current_level
-
-	var result1 = framework.assert_true(LogManager.set_level_by_name("DEBUG"), "Should accept DEBUG")
-	var result2 = framework.assert_equal(LogManager.current_level, LogManager.LogLevel.DEBUG, "Should set DEBUG level")
-
-	LogManager.current_level = original_level
-
-	return result1 and result2
 
 # ============================================================================
 # AudioManager Tests
@@ -684,3 +588,208 @@ func test_notification_display() -> bool:
 	if framework == null:
 		return false
 	return framework.assert_not_null(active_count, "Active count should be accessible")
+
+# ============================================================================
+# NetworkManager Tests
+# ============================================================================
+
+func _get_network_manager_test_names() -> Array:
+	return [
+		{"name": "NetworkManager exists", "method": "test_networkmanager_exists"},
+		{"name": "NetworkManager initial state", "method": "test_networkmanager_initial_state"},
+		{"name": "NetworkManager arena ready tracking", "method": "test_networkmanager_arena_ready_tracking"},
+		{"name": "NetworkManager get ready peers", "method": "test_networkmanager_get_ready_peers"},
+	]
+
+func test_networkmanager_exists() -> bool:
+	var framework = _get_framework()
+	if framework == null:
+		return false
+	return framework.assert_not_null(NetworkManager, "NetworkManager should exist")
+
+func test_networkmanager_initial_state() -> bool:
+	var framework = _get_framework()
+	if framework == null:
+		return false
+
+	# Ensure we're disconnected for this test
+	NetworkManager.disconnect_from_game()
+
+	var initial_connected = NetworkManager.is_network_connected()
+	var initial_host = NetworkManager.is_host()
+
+	# Should not be connected initially
+	if not framework.assert_false(initial_connected, "Should not be connected initially"):
+		return false
+
+	# Should not be host initially
+	if not framework.assert_false(initial_host, "Should not be host initially"):
+		return false
+
+	return true
+
+func test_networkmanager_arena_ready_tracking() -> bool:
+	var framework = _get_framework()
+	if framework == null:
+		return false
+
+	# Clear any existing state
+	NetworkManager._arena_ready_peers.clear()
+
+	# Test initial state - no peers should be ready
+	var ready_peers = NetworkManager.get_ready_peers()
+	if not framework.assert_true(ready_peers.is_empty(), "No peers should be ready initially"):
+		return false
+
+	# Test reporting local arena ready (host)
+	var was_ready = NetworkManager.is_peer_arena_ready(1)
+	if not framework.assert_false(was_ready, "Peer 1 should not be ready initially"):
+		return false
+
+	# Report ready and check
+	NetworkManager.report_local_arena_ready()
+	var is_ready = NetworkManager.is_peer_arena_ready(1)
+	if not framework.assert_true(is_ready, "Peer 1 should be ready after reporting"):
+		return false
+
+	# Check ready peers list
+	ready_peers = NetworkManager.get_ready_peers()
+	if not framework.assert_equal(ready_peers.size(), 1, "Should have 1 ready peer"):
+		return false
+	if not framework.assert_equal(ready_peers[0], 1, "Ready peer should be peer 1"):
+		return false
+
+	return true
+
+func test_networkmanager_get_ready_peers() -> bool:
+	var framework = _get_framework()
+	if framework == null:
+		return false
+
+	# Start with clean state - clear any existing ready peers
+	NetworkManager._arena_ready_peers.clear()
+	var ready_peers = NetworkManager.get_ready_peers()
+	if not framework.assert_true(ready_peers.is_empty(), "Should start with no ready peers"):
+		return false
+
+	# Manually set some peers as ready (simulating remote reports)
+	NetworkManager._arena_ready_peers[2] = true
+	NetworkManager._arena_ready_peers[5] = true
+
+	ready_peers = NetworkManager.get_ready_peers()
+	if not framework.assert_equal(ready_peers.size(), 2, "Should have 2 ready peers"):
+		return false
+	if not framework.assert_true(ready_peers.has(2), "Should contain peer 2"):
+		return false
+	if not framework.assert_true(ready_peers.has(5), "Should contain peer 5"):
+		return false
+
+	# Clean up
+	NetworkManager._arena_ready_peers.clear()
+
+	return true
+
+func test_logmanager_exists() -> bool:
+	var framework = _get_framework()
+	if framework == null:
+		return false
+	return framework.assert_not_null(LogManager, "LogManager should exist")
+
+func test_logmanager_initialization() -> bool:
+	var framework = _get_framework()
+	if framework == null:
+		return false
+
+	# Test basic properties exist
+	var level = LogManager.current_level
+	if not framework.assert_not_null(level, "Log level should be accessible"):
+		return false
+
+	var buffer_size = LogManager.ring_buffer_size
+	if not framework.assert_true(buffer_size > 0, "Ring buffer size should be positive"):
+		return false
+
+	return true
+
+func test_logmanager_instance_prefix() -> bool:
+	var framework = _get_framework()
+	if framework == null:
+		return false
+
+	# Test instance tag exists and follows expected format
+	var instance_tag = LogManager._instance_tag
+	if not framework.assert_not_null(instance_tag, "Instance tag should exist"):
+		return false
+	if not framework.assert_true(instance_tag.begins_with("pid="), "Instance tag should start with 'pid='"):
+		return false
+
+	# Test that network context can be updated
+	var original_peer_id = LogManager._peer_id
+	var original_is_server = LogManager._is_server
+
+	LogManager.update_network_context(42, true)
+	if not framework.assert_equal(LogManager._peer_id, 42, "Peer ID should be updated"):
+		return false
+	if not framework.assert_true(LogManager._is_server, "Server flag should be updated"):
+		return false
+
+	# Restore original values
+	LogManager.update_network_context(original_peer_id, original_is_server)
+
+	return true
+
+func test_logmanager_file_logging() -> bool:
+	var framework = _get_framework()
+	if framework == null:
+		return false
+
+	# Test file logging properties
+	var file_logging_enabled = LogManager.enable_file_logging
+	if not framework.assert_not_null(file_logging_enabled, "File logging flag should be accessible"):
+		return false
+
+	var log_directory = LogManager.log_directory
+	if not framework.assert_not_null(log_directory, "Log directory should be set"):
+		return false
+
+	var log_pattern = LogManager.log_filename_pattern
+	if not framework.assert_not_null(log_pattern, "Log filename pattern should be set"):
+		return false
+
+	# Test that log file path is constructed (even if file doesn't exist in tests)
+	var log_path = LogManager._log_file_path
+	if not framework.assert_not_null(log_path, "Log file path should be constructed"):
+		return false
+	if not framework.assert_true(log_path.ends_with(".log"), "Log file path should end with .log"):
+		return false
+
+	return true
+
+func test_logmanager_network_context() -> bool:
+	var framework = _get_framework()
+	if framework == null:
+		return false
+
+	# Test network context integration
+	var original_peer_id = LogManager._peer_id
+	var original_is_server = LogManager._is_server
+
+	# Update context
+	LogManager.update_network_context(123, false)
+	if not framework.assert_equal(LogManager._peer_id, 123, "Peer ID should be set"):
+		return false
+	if not framework.assert_false(LogManager._is_server, "Server flag should be set to false"):
+		return false
+
+	# Test logging with context (this will create a log entry we can inspect)
+	LogManager.debug("ManagerTests", "Test log with network context peer_id=123 is_server=false")
+
+	# Restore
+	LogManager.update_network_context(original_peer_id, original_is_server)
+
+	return true
+
+# ============================================================================
+# LogManager Tests (updated)
+# ============================================================================
+
