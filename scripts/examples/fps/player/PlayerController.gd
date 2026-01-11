@@ -52,6 +52,9 @@ var _server_snapshots: Array[Dictionary] = []  # {seq, position, yaw, pitch, vel
 var _remote_target_state: Dictionary = {}  # Server state to interpolate toward
 var _remote_interp_t: float = 1.0  # Interpolation parameter (1.0 = at target)
 
+# Throttling for remote state broadcasts (~15 Hz to reduce bandwidth)
+var _last_remote_broadcast_ms: int = 0
+
 @onready var _head: Node3D = $Head
 @onready var _camera_fp: Camera3D = $Head/Camera
 @onready var _camera_tp: Camera3D = $Head/ThirdPersonArm/ThirdPersonCamera
@@ -176,7 +179,13 @@ func _process(_delta: float) -> void:
 	# Remote player smoothing: interpolate toward server state
 	if multiplayer.get_unique_id() != owner_peer_id and not _remote_target_state.is_empty():
 		_remote_interp_t = min(_remote_interp_t + _delta * 10.0, 1.0)  # Smooth over ~100ms
-		if _remote_interp_t < 1.0:
+		if _remote_interp_t <= 1.0:
+			# Debug: Check if we're actually interpolating
+			var debug_now := Time.get_ticks_msec()
+			if debug_now - _dbg_last_tracer_ms > 500:  # Less frequent debug
+				LogManager.info("PlayerController", "INTERPOLATING: peer %d (my_peer=%d), interp_t=%.3f" % [
+					owner_peer_id, multiplayer.get_unique_id(), _remote_interp_t
+				])
 			var current_state: Dictionary = _get_current_state()
 			var interp_position: Vector3 = current_state.position.lerp(_remote_target_state.position, _remote_interp_t)
 			var interp_yaw: float = lerp_angle(current_state.yaw, _remote_target_state.yaw, _remote_interp_t)
@@ -187,6 +196,14 @@ func _process(_delta: float) -> void:
 			_pitch = interp_pitch
 			rotation.y = _yaw
 			_head.rotation.x = _pitch
+
+			# Debug: Log position updates occasionally
+			var now_ms := Time.get_ticks_msec()
+			if now_ms - _dbg_last_tracer_ms > 200:  # Every 200ms
+				LogManager.info("PlayerController", "Interpolating peer %d: current=%s target=%s interp_t=%.2f" % [
+					owner_peer_id, str(current_state.position), str(_remote_target_state.position), _remote_interp_t
+				])
+				_dbg_last_tracer_ms = now_ms
 
 func _toggle_view() -> void:
 	if _view_mode == ViewMode.FIRST_PERSON:
@@ -321,6 +338,28 @@ func _receive_server_snapshot(sequence: int, snapshot_position: Vector3, yaw: fl
 	# Reconcile with latest snapshot
 	_reconcile_with_server()
 
+# Server broadcasts authoritative state to all peers for remote player interpolation
+@rpc("any_peer", "unreliable")
+func _rpc_remote_state(state_position: Vector3, yaw: float, pitch: float, state_velocity: Vector3) -> void:
+	# Only accept from server (local call sender=0 or server peer sender=1)
+	var sender := multiplayer.get_remote_sender_id()
+	if sender != 0 and sender != 1:
+		return
+
+	# Only update remote state for non-owning peers
+	if multiplayer.get_unique_id() == owner_peer_id:
+		return
+
+	LogManager.info("PlayerController", "Received remote state for peer %d: pos=%s (my peer=%d)" % [owner_peer_id, str(state_position), multiplayer.get_unique_id()])
+	# Update target state for interpolation
+	_remote_target_state = {
+		"position": state_position,
+		"yaw": yaw,
+		"pitch": pitch,
+		"velocity": state_velocity
+	}
+	_remote_interp_t = 0.0
+
 # Client reconciliation: rewind and replay from authoritative server state
 func _reconcile_with_server() -> void:
 	if _server_snapshots.is_empty():
@@ -425,6 +464,15 @@ func _physics_process(delta: float) -> void:
 	# Send periodic snapshots to owning client for reconciliation
 	if multiplayer.get_unique_id() != owner_peer_id:  # Only for remote players
 		_send_snapshot_to_client()
+
+	# Broadcast authoritative state to all peers for remote interpolation (throttled to ~30 Hz)
+	var now_ms := Time.get_ticks_msec()
+	if now_ms - _last_remote_broadcast_ms > 33:  # ~30 Hz (1000ms/30)
+		_last_remote_broadcast_ms = now_ms
+		LogManager.info("PlayerController", "Broadcasting remote state for peer %d: pos=%s" % [owner_peer_id, str(global_position)])
+		# Send to all peers except ourselves (we don't need to receive our own state)
+		for peer_id in multiplayer.get_peers():
+			_rpc_remote_state.rpc_id(peer_id, global_position, _yaw, _pitch, velocity)
 
 	# For remote players, store server state for interpolation
 	if multiplayer.get_unique_id() != owner_peer_id:

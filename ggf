@@ -39,12 +39,21 @@ show_help() {
     echo "${GREEN}Commands:${NC}"
     echo "    ${YELLOW}install${NC}           Download and install Godot engine"
     echo "    ${YELLOW}test [--verbose]${NC}  Run framework tests (use --verbose to see all warnings)"
+    echo "    ${YELLOW}export [options]${NC}  Export the project using presets in export_presets.cfg"
     echo "    ${YELLOW}help${NC}              Show this help message"
+    echo
+    echo "${GREEN}Export options:${NC}"
+    echo "    ${YELLOW}--list${NC}            List available export presets"
+    echo "    ${YELLOW}--preset <name>${NC}   Export only the given preset (can be repeated)"
+    echo "    ${YELLOW}--debug${NC}           Export in debug mode (default: release)"
     echo
     echo "${GREEN}Examples:${NC}"
     echo "    ggf install          Install Godot 4.5.1"
     echo "    ggf test             Run all framework tests"
     echo "    ggf test --verbose   Run tests with verbose output (shows all warnings)"
+    echo "    ggf export           Export all presets defined in export_presets.cfg"
+    echo "    ggf export --list    List export presets"
+    echo "    ggf export --preset \"Linux\"     Export only the Linux preset"
     echo "    ggf help             Show this help message"
     echo
     echo "${GREEN}For more information, visit:${NC} https://godotengine.org/"
@@ -153,6 +162,180 @@ find_godot_executable() {
     fi
     
     return 1
+}
+
+# Parse export presets from export_presets.cfg.
+# Output format: <preset_name>\t<export_path>
+list_export_presets() {
+    if [ ! -f "export_presets.cfg" ]; then
+        return 1
+    fi
+
+    awk '
+        BEGIN { name=""; path=""; }
+        /^\[preset\.[0-9]+\]$/ {
+            if (name != "") {
+                printf("%s\t%s\n", name, path);
+            }
+            name=""; path="";
+            next;
+        }
+        /^name="/ {
+            line=$0;
+            sub(/^name="/, "", line);
+            sub(/"$/, "", line);
+            name=line;
+            next;
+        }
+        /^export_path="/ {
+            line=$0;
+            sub(/^export_path="/, "", line);
+            sub(/"$/, "", line);
+            path=line;
+            next;
+        }
+        END {
+            if (name != "") {
+                printf("%s\t%s\n", name, path);
+            }
+        }
+    ' export_presets.cfg
+}
+
+# Export project using export presets.
+cmd_export() {
+    local MODE="release"
+    local LIST_ONLY=false
+    local -a REQUESTED_PRESETS=()
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --list)
+                LIST_ONLY=true
+                shift
+                ;;
+            --preset)
+                if [ -z "${2:-}" ]; then
+                    echo "${RED}Error: --preset requires a value${NC}"
+                    exit 1
+                fi
+                REQUESTED_PRESETS+=("$2")
+                shift 2
+                ;;
+            --debug)
+                MODE="debug"
+                shift
+                ;;
+            --release)
+                MODE="release"
+                shift
+                ;;
+            *)
+                echo "${YELLOW}Unknown option: $1${NC}"
+                shift
+                ;;
+        esac
+    done
+
+    echo "${BLUE}Exporting project (${MODE})...${NC}"
+
+    # Find Godot executable
+    GODOT_EXEC=$(find_godot_executable)
+    local find_exit=$?
+    if [ $find_exit -ne 0 ] || [ -z "$GODOT_EXEC" ]; then
+        echo "${RED}Error: Could not find Godot executable${NC}"
+        echo "${YELLOW}Please install Godot first using: ggf install${NC}"
+        exit 1
+    fi
+
+    # Check if project.godot exists
+    if [ ! -f "project.godot" ]; then
+        echo "${RED}Error: project.godot not found${NC}"
+        echo "${YELLOW}Please run this command from the framework root directory${NC}"
+        exit 1
+    fi
+
+    # Check export presets file
+    if [ ! -f "export_presets.cfg" ]; then
+        echo "${RED}Error: export_presets.cfg not found${NC}"
+        echo "${YELLOW}Create export presets in the Godot editor (Project > Export) first.${NC}"
+        exit 1
+    fi
+
+    local presets_output
+    presets_output="$(list_export_presets)"
+    if [ -z "$presets_output" ]; then
+        echo "${RED}Error: No export presets found in export_presets.cfg${NC}"
+        exit 1
+    fi
+
+    if [ "$LIST_ONLY" = true ]; then
+        echo "${GREEN}Available export presets:${NC}"
+        echo "$presets_output" | while IFS=$'\t' read -r preset_name preset_path; do
+            printf "  - %s -> %s\n" "$preset_name" "$preset_path"
+        done
+        exit 0
+    fi
+
+    # Build a lookup table of preset -> export_path
+    declare -A PRESET_PATHS
+    while IFS=$'\t' read -r preset_name preset_path; do
+        PRESET_PATHS["$preset_name"]="$preset_path"
+    done <<< "$presets_output"
+
+    # Determine which presets to export
+    local -a PRESETS_TO_EXPORT=()
+    if [ ${#REQUESTED_PRESETS[@]} -gt 0 ]; then
+        PRESETS_TO_EXPORT=("${REQUESTED_PRESETS[@]}")
+    else
+        while IFS=$'\t' read -r preset_name preset_path; do
+            PRESETS_TO_EXPORT+=("$preset_name")
+        done <<< "$presets_output"
+    fi
+
+    local failures=0
+    for preset in "${PRESETS_TO_EXPORT[@]}"; do
+        if [[ -z "${PRESET_PATHS[$preset]+x}" ]]; then
+            echo "${RED}Error: Unknown preset: $preset${NC}"
+            echo "${YELLOW}Use: ggf export --list${NC}"
+            exit 1
+        fi
+
+        local out_path="${PRESET_PATHS[$preset]}"
+        if [ -z "$out_path" ]; then
+            echo "${RED}Error: Preset '$preset' has no export_path set in export_presets.cfg${NC}"
+            failures=$((failures + 1))
+            continue
+        fi
+
+        local out_dir
+        out_dir="$(dirname "$out_path")"
+        mkdir -p "$out_dir"
+
+        echo "${BLUE}Exporting preset: ${BOLD}${preset}${NC} -> ${YELLOW}${out_path}${NC}"
+        if [ "$MODE" = "debug" ]; then
+            "$GODOT_EXEC" --headless --export-debug "$preset" "$out_path" 2>&1
+        else
+            "$GODOT_EXEC" --headless --export-release "$preset" "$out_path" 2>&1
+        fi
+        local export_exit=$?
+        if [ $export_exit -ne 0 ]; then
+            echo "${RED}✗ Export failed for preset '$preset' (exit code: $export_exit)${NC}"
+            failures=$((failures + 1))
+        else
+            echo "${GREEN}✓ Exported '$preset'${NC}"
+        fi
+        echo
+    done
+
+    if [ $failures -ne 0 ]; then
+        echo "${RED}✗ Export finished with $failures failure(s).${NC}"
+        exit 1
+    fi
+
+    echo "${GREEN}✓ Export completed successfully.${NC}"
+    exit 0
 }
 
 # Run tests
@@ -285,6 +468,9 @@ main() {
             ;;
         test)
             cmd_test "$@"
+            ;;
+        export)
+            cmd_export "$@"
             ;;
         help|--help|-h)
             show_help
