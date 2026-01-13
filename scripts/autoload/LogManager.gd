@@ -91,11 +91,16 @@ class GameLogger extends Logger:
 				backtrace_info = "\nStack trace:"
 				for i in script_backtraces.size():
 					var bt: ScriptBacktrace = script_backtraces[i]
+					# ScriptBacktrace is a built-in type with direct properties (not a Dictionary / Object).
+					# Using bt.get(...) would always fail and hide stack traces.
+					var file_name: String = bt.file
+					var line_num: int = bt.line
+					var func_name: String = bt.function
 					backtrace_info += "\n  %d - %s:%d in function %s()" % [
 						i + 1,
-						bt.file,
-						bt.line,
-						bt.function
+						file_name,
+						line_num,
+						func_name
 					]
 
 			# Get error type name - use basic mapping for common errors

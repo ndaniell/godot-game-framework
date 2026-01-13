@@ -159,12 +159,12 @@ func report_local_arena_ready() -> void:
 		if LogManager:
 			LogManager.warn("NetworkManager", "report_local_arena_ready called on non-server")
 		return
-	# Host is peer 1
-	_arena_ready_peers[1] = true
+	var host_id := get_server_peer_id()
+	_arena_ready_peers[host_id] = true
 	if LogManager:
 		LogManager.debug("NetworkManager", "Local (host) arena marked as ready")
-	arena_ready.emit(1)
-	_emit_eventmanager("arena_ready", {"peer_id": 1})
+	arena_ready.emit(host_id)
+	_emit_eventmanager("arena_ready", {"peer_id": host_id})
 
 ## Client -> Server RPC: report that this peer's arena is loaded and ready.
 @rpc("any_peer", "reliable")
@@ -186,9 +186,10 @@ func _rpc_report_arena_ready() -> void:
 
 @rpc("any_peer", "reliable")
 func _rpc_session_event(event_name: StringName, data: Dictionary) -> void:
-	# Accept local server call (sender=0) and server->client calls (sender=1).
+	# Accept local server call (sender=0) and server->client calls (sender=<server peer id>).
 	var sender := multiplayer.get_remote_sender_id()
-	if sender != 0 and sender != 1:
+	var server_id := get_server_peer_id()
+	if sender != 0 and sender != server_id:
 		return
 
 	session_event_received.emit(event_name, data)

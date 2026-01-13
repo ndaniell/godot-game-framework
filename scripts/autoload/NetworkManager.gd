@@ -45,6 +45,25 @@ func is_network_connected() -> bool:
 func is_host() -> bool:
 	return multiplayer.multiplayer_peer != null and multiplayer.is_server()
 
+## Best-effort server peer-id lookup.
+## - On the host, this is always `multiplayer.get_unique_id()`.
+## - On ENet clients, the server is always peer id `1`.
+## - For non-ENet peers, we fall back to inference (smallest connected peer-id).
+func get_server_peer_id() -> int:
+	if multiplayer.multiplayer_peer == null:
+		return 1
+	if multiplayer.is_server():
+		return multiplayer.get_unique_id()
+	if multiplayer.multiplayer_peer is ENetMultiplayerPeer:
+		return 1
+	var peers := multiplayer.get_peers()
+	if peers.is_empty():
+		return 1
+	var server_id := int(peers[0])
+	for p in peers:
+		server_id = mini(server_id, int(p))
+	return server_id
+
 func host(port: int = -1) -> bool:
 	if port <= 0:
 		port = default_port
@@ -137,9 +156,10 @@ func send_session_event_to_peer(peer_id: int, event_name: StringName, data: Dict
 
 @rpc("any_peer", "reliable")
 func _rpc_session_event(event_name: StringName, data: Dictionary) -> void:
-	# Accept local server call (sender=0) and server->client calls (sender=1).
+	# Accept local server call (sender=0) and server->client calls (sender=<server peer id>).
 	var sender := multiplayer.get_remote_sender_id()
-	if sender != 0 and sender != 1:
+	var server_id := get_server_peer_id()
+	if sender != 0 and sender != server_id:
 		return
 
 	session_event_received.emit(event_name, data)

@@ -76,4 +76,3 @@ position = Vector3(-6, 1.5, -6)
 
 [node name="Spawner" type="MultiplayerSpawner" parent="."]
 spawn_path = NodePath("../Players")
-
