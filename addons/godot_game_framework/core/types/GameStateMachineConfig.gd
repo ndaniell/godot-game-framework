@@ -5,7 +5,11 @@ class_name GameStateMachineConfig extends Resource
 ## This resource contains all state definitions and the default state.
 ## Load this resource in GameManager to configure the state machine.
 
-@export var states: Dictionary = {}  # String -> GameStateDefinition
+# NOTE: In headless/scripted runs, Godot may not have scanned addon `class_name` globals yet.
+# Avoid hard type annotations against custom classes here; validate via script path instead.
+const _GAME_STATE_DEFINITION_SCRIPT := preload("res://addons/godot_game_framework/core/types/GameStateDefinition.gd")
+
+@export var states: Dictionary = {}  # String -> Resource (GameStateDefinition)
 @export var default_state: String = "MENU"
 
 func _init(
@@ -16,8 +20,8 @@ func _init(
 	default_state = p_default_state
 
 ## Get a state definition by name
-func get_state(state_name: String) -> GameStateDefinition:
-	return states.get(state_name, null)
+func get_state(state_name: String) -> Resource:
+	return states.get(state_name, null) as Resource
 
 ## Check if a state exists
 func has_state(state_name: String) -> bool:
@@ -36,17 +40,26 @@ func validate() -> bool:
 		return false
 	
 	for state_name in states:
-		var state_def = states[state_name]
-		if not state_def is GameStateDefinition:
+		var state_def := states[state_name] as Resource
+		if state_def == null:
 			return false
-		if state_def.name.is_empty():
+		if state_def.get_script() != _GAME_STATE_DEFINITION_SCRIPT:
+			return false
+		var name_val: Variant = state_def.get("name")
+		if not (name_val is String) or String(name_val).is_empty():
 			return false
 		
 		# Validate transitions reference existing states.
 		# Use push_warning here so this Resource can validate in-editor without requiring the addon autoload.
-		for transition_state in state_def.allowed_transitions:
-			if not states.has(transition_state):
-				push_warning("GameStateMachineConfig: State '%s' has transition to non-existent state: %s" % [state_name, transition_state])
+		var allowed_transitions_val: Variant = state_def.get("allowed_transitions")
+		if allowed_transitions_val is Array:
+			for transition_state in allowed_transitions_val:
+				if transition_state is String and not states.has(transition_state):
+					push_warning("GameStateMachineConfig: State '%s' has transition to non-existent state: %s" % [state_name, transition_state])
+		elif allowed_transitions_val is PackedStringArray:
+			for transition_state in allowed_transitions_val:
+				if not states.has(transition_state):
+					push_warning("GameStateMachineConfig: State '%s' has transition to non-existent state: %s" % [state_name, transition_state])
 	
 	return true
 

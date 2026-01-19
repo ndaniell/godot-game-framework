@@ -19,7 +19,7 @@ signal game_quit()
 @export var states_config_path: String = "res://addons/godot_game_framework/resources/data/game_states.tres"
 
 # State machine configuration resource
-var _state_config: GameStateMachineConfig = null
+var _state_config: Resource = null
 var _default_state: String = "MENU"
 
 # Current game state (string-based, loaded from configuration)
@@ -87,8 +87,8 @@ func _load_state_definitions() -> void:
 	GGF.log().debug("GameManager", "Loading state config from: " + states_config_path)
 
 	# Load the state machine configuration resource
-	var config_resource: GameStateMachineConfig = null
-	var load_result := ResourceLoader.load(states_config_path) as GameStateMachineConfig
+	var config_resource: Resource = null
+	var load_result: Resource = ResourceLoader.load(states_config_path)
 	if load_result == null:
 		GGF.log().error("GameManager", "Failed to load states config resource: " + states_config_path + ". Cannot initialize state machine.")
 		return
@@ -136,7 +136,7 @@ func change_state(new_state: String) -> void:
 		return
 
 	# Validate transition is allowed
-	var current_state_def: GameStateDefinition = _state_config.get_state(current_state)
+	var current_state_def: Resource = _state_config.get_state(current_state) as Resource
 	if current_state_def != null:
 		var allowed_transitions_val = current_state_def.get("allowed_transitions")
 		# Convert to Array[String] - handle both Array and PackedStringArray
@@ -164,8 +164,8 @@ func _handle_state_transition(old_state: String, new_state: String) -> void:
 	if _state_config == null:
 		return
 	
-	var new_state_def: GameStateDefinition = _state_config.get_state(new_state)
-	var old_state_def: GameStateDefinition = _state_config.get_state(old_state)
+	var new_state_def: Resource = _state_config.get_state(new_state) as Resource
+	var old_state_def: Resource = _state_config.get_state(old_state) as Resource
 	
 	if new_state_def == null:
 		return
@@ -399,10 +399,10 @@ func is_in_state(state: String) -> bool:
 ## Get state definition for a given state
 ## @param state_name: String name of the state
 ## @return: GameStateDefinition resource, or null if not found
-func get_state_definition(state_name: String) -> GameStateDefinition:
+func get_state_definition(state_name: String) -> Resource:
 	if _state_config == null:
 		return null
-	return _state_config.get_state(state_name)
+	return _state_config.get_state(state_name) as Resource
 
 ## Get all available state names
 ## @return: Array of state name strings
@@ -421,7 +421,7 @@ func can_transition_to(target_state: String) -> bool:
 	if not _state_config.has_state(target_state):
 		return false
 	
-	var current_state_def: GameStateDefinition = _state_config.get_state(current_state)
+	var current_state_def: Resource = _state_config.get_state(current_state) as Resource
 	if current_state_def == null:
 		return false
 	
