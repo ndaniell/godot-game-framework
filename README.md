@@ -1,5 +1,7 @@
 # Godot Game Framework
 
+[![Unit tests](https://github.com/ndaniell/godot-game-framework/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/ndaniell/godot-game-framework/actions/workflows/unit-tests.yml) [![GDScript style](https://github.com/ndaniell/godot-game-framework/actions/workflows/gdscript-style.yml/badge.svg)](https://github.com/ndaniell/godot-game-framework/actions/workflows/gdscript-style.yml)
+
 A comprehensive, extensible game framework for Godot 4.5+ that provides essential managers and systems for rapid game development.
 
 ## Features
