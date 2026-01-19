@@ -2,10 +2,32 @@ extends "res://scripts/autoload/GameManager.gd"
 
 const SCENE_FPS_MAIN := "res://scenes/fps/FpsMain.tscn"
 const SCENE_ARENA := "res://scenes/fps/levels/Arena01.tscn"
+const SCENE_TEST := "res://scenes/test/TestScene.tscn"
 
 # Late-join queueing during arena loading transitions
 var _arena_loading_in_progress: bool = false
 var _queued_late_joiners: Array[int] = []
+
+func _is_test_run() -> bool:
+	var tree := get_tree()
+	if tree == null:
+		return _is_test_run_from_cmdline()
+	var current := tree.current_scene
+	if current != null and current.scene_file_path == SCENE_TEST:
+		return true
+	return _is_test_run_from_cmdline()
+
+func _is_test_run_from_cmdline() -> bool:
+	# `ggf test` launches Godot with `--script /tmp/ggf_test_runner.gd`.
+	# At that point the current scene may still be the project's configured main scene,
+	# so we use the command line as the reliable detection signal.
+	var args := OS.get_cmdline_args()
+	for i in range(args.size()):
+		if str(args[i]) == "--script" and i + 1 < args.size():
+			var script_path := str(args[i + 1])
+			if script_path.ends_with("ggf_test_runner.gd"):
+				return true
+	return false
 
 func _ready() -> void:
 	LogManager.info("FpsGameManager", "FpsGameManager initializing...")
@@ -13,6 +35,10 @@ func _ready() -> void:
 	LogManager.info("FpsGameManager", "FpsGameManager ready")
 
 func _on_game_ready() -> void:
+	if _is_test_run():
+		LogManager.debug("FpsGameManager", "Detected TestScene run; skipping FPS scene forcing")
+		return
+
 	if EventManager:
 		EventManager.subscribe("fps_match_start", _on_match_start)
 		EventManager.subscribe("network_disconnected", _on_network_disconnected)
@@ -34,6 +60,8 @@ func _on_menu_entered() -> void:
 
 func _on_state_changed(old_state: String, new_state: String) -> void:
 	super._on_state_changed(old_state, new_state)
+	if _is_test_run():
+		return
 	match new_state:
 		"MENU":
 			if current_scene_path != SCENE_FPS_MAIN:

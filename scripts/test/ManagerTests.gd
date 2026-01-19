@@ -118,6 +118,7 @@ func _get_log_manager_test_names() -> Array:
 		{"name": "LogManager instance prefix", "method": "test_logmanager_instance_prefix"},
 		{"name": "LogManager file logging", "method": "test_logmanager_file_logging"},
 		{"name": "LogManager network context", "method": "test_logmanager_network_context"},
+		{"name": "LogManager error includes stack trace", "method": "test_logmanager_error_stack_trace"},
 	]
 
 # ============================================================================
@@ -788,6 +789,60 @@ func test_logmanager_network_context() -> bool:
 	LogManager.update_network_context(original_peer_id, original_is_server)
 
 	return true
+
+func _trigger_logmanager_error_for_stack_trace(unique_message: String) -> void:
+	# Indirect call so the backtrace has at least 2 frames from user code.
+	LogManager.error("StackTraceTest", unique_message)
+
+func test_logmanager_error_stack_trace() -> bool:
+	var framework = _get_framework()
+	if framework == null:
+		return false
+
+	# Preserve state
+	var original_ring_buffer_enabled: bool = LogManager.enable_ring_buffer
+
+	# Ensure ring buffer is on so the custom OS logger can capture the backtrace.
+	LogManager.enable_ring_buffer = true
+	LogManager.clear_ring_buffer()
+
+	var unique := "StackTraceTest_%d" % Time.get_ticks_msec()
+	_trigger_logmanager_error_for_stack_trace(unique)
+
+	# The OS logger callback should be synchronous, but add a tiny retry loop to avoid flakiness.
+	var found: Dictionary = {}
+	for _attempt in range(10):
+		var buffer: Array[Dictionary] = LogManager.get_ring_buffer()
+		for entry in buffer:
+			if entry.get("source", "") == "engine" \
+					and entry.get("level", "") == "ERROR" \
+					and str(entry.get("message", "")).contains(unique):
+				found = entry
+				break
+		if not found.is_empty():
+			break
+		OS.delay_msec(1)
+
+	var ok := true
+	ok = framework.assert_false(found.is_empty(), "Expected an engine-captured ERROR entry with stack trace in ring buffer") and ok
+	if found.is_empty():
+		LogManager.enable_ring_buffer = original_ring_buffer_enabled
+		return ok
+
+	var msg: String = str(found.get("message", ""))
+	ok = framework.assert_true(msg.contains("Stack trace:"), "Captured error should include 'Stack trace:' section") and ok
+	# ScriptBacktrace.format() output should include at least one script frame reference.
+	ok = framework.assert_true(
+		msg.contains("res://") or msg.contains(".gd:"),
+		"Stack trace should include at least one script location (e.g. res://... or .gd:line)"
+	) and ok
+
+	var bt_count: int = int(found.get("backtrace_count", 0))
+	ok = framework.assert_true(bt_count > 0, "Expected backtrace_count > 0, got: " + str(bt_count)) and ok
+
+	# Restore state
+	LogManager.enable_ring_buffer = original_ring_buffer_enabled
+	return ok
 
 # ============================================================================
 # LogManager Tests (updated)

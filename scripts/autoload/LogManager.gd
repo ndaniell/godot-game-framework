@@ -91,17 +91,19 @@ class GameLogger extends Logger:
 				backtrace_info = "\nStack trace:"
 				for i in script_backtraces.size():
 					var bt: ScriptBacktrace = script_backtraces[i]
-					# ScriptBacktrace is a built-in type with direct properties (not a Dictionary / Object).
-					# Using bt.get(...) would always fail and hide stack traces.
-					var file_name: String = bt.file
-					var line_num: int = bt.line
-					var func_name: String = bt.function
-					backtrace_info += "\n  %d - %s:%d in function %s()" % [
-						i + 1,
-						file_name,
-						line_num,
-						func_name
-					]
+					# ScriptBacktrace is a Godot type with its own formatter.
+					# Using format() avoids relying on per-frame property names (file/line/function),
+					# which can differ between engine versions/builds.
+					var formatted := ""
+					if bt and bt.has_method("format"):
+						formatted = str(bt.format()).strip_edges()
+					else:
+						formatted = str(bt).strip_edges()
+
+					backtrace_info += "\nBacktrace %d:" % (i + 1)
+					if not formatted.is_empty():
+						# Indent each line for readability.
+						backtrace_info += "\n  " + formatted.replace("\n", "\n  ")
 
 			# Get error type name - use basic mapping for common errors
 			var error_type_name := "UNKNOWN"

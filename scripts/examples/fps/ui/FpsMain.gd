@@ -32,4 +32,3 @@ func _on_lobby_open(data: Dictionary) -> void:
 func _on_menu_open(_data: Dictionary) -> void:
 	if UIManager:
 		UIManager.open_menu("fps_main_menu", true)
-
