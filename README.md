@@ -31,30 +31,31 @@ A comprehensive, extensible game framework for Godot 4.5+ that provides essentia
 
 1. Clone or download this repository
 2. Open the project in Godot 4.5 or later
-3. All managers are automatically loaded as autoload singletons
+3. Enable the addon (or keep `GGF` autoload enabled)
 
 ## Quick Start
 
 ### Basic Usage
 
-All managers are available globally as autoload singletons:
+Managers are available via the single autoload bootstrapper `GGF`:
 
 ```gdscript
 # Play music
-AudioManager.play_music(my_music_stream)
+GGF.get_manager(&"AudioManager").play_music(my_music_stream)
 
 # Change game state
-GameManager.change_state("PLAYING")
+GGF.get_manager(&"GameManager").change_state("PLAYING")
 
 # Save game
-SaveManager.save_game(0, {"level": 5, "score": 1000})
+GGF.get_manager(&"SaveManager").save_game(0, {"level": 5, "score": 1000})
 
 # Show notification
-NotificationManager.show_success("Level Complete!")
+GGF.notifications().show_success("Level Complete!")
 
 # Create object pool
-PoolManager.create_pool("bullets", bullet_prefab, 20)
-var bullet = PoolManager.spawn("bullets", position)
+var pool_manager := GGF.get_manager(&"PoolManager")
+pool_manager.create_pool("bullets", bullet_prefab, 20)
+var bullet = pool_manager.spawn("bullets", position)
 ```
 
 ### Extending Managers
@@ -96,24 +97,24 @@ func _on_music_started(stream: AudioStream) -> void:
 
 ```gdscript
 # Audio
-AudioManager.play_music(music_stream, fade_in=true)
-AudioManager.play_sfx(sfx_stream)
+GGF.get_manager(&"AudioManager").play_music(music_stream, fade_in=true)
+GGF.get_manager(&"AudioManager").play_sfx(sfx_stream)
 
 # Game State
-GameManager.change_state("PLAYING")
-GameManager.pause_game()
+GGF.get_manager(&"GameManager").change_state("PLAYING")
+GGF.get_manager(&"GameManager").pause_game()
 
 # Save/Load
-SaveManager.save_game(0, {"level": 5})
-SaveManager.load_game(0)
+GGF.get_manager(&"SaveManager").save_game(0, {"level": 5})
+GGF.get_manager(&"SaveManager").load_game(0)
 
 # Events
-EventManager.subscribe("player_died", _on_player_died)
-EventManager.emit("player_died", {"score": 1000})
+GGF.events().subscribe("player_died", _on_player_died)
+GGF.events().emit("player_died", {"score": 1000})
 
 # UI
-UIManager.open_menu("main_menu")
-NotificationManager.show_success("Level Complete!")
+GGF.get_manager(&"UIManager").open_menu("main_menu")
+GGF.notifications().show_success("Level Complete!")
 ```
 
 For detailed documentation on each manager, see the **[docs/](docs/)** folder.
@@ -160,20 +161,14 @@ func _on_music_ended(stream: AudioStream) -> void:
 
 ```
 godot-game-framework/
-├── scripts/
-│   └── autoload/
-│       ├── AudioManager.gd
-│       ├── GameManager.gd
-│       ├── SaveManager.gd
-│       ├── InputManager.gd
-│       ├── SceneManager.gd
-│       ├── UIManager.gd
-│       ├── SettingsManager.gd
-│       ├── EventManager.gd
-│       ├── ResourceManager.gd
-│       ├── PoolManager.gd
-│       ├── TimeManager.gd
-│       └── NotificationManager.gd
+├── addons/
+│   └── godot_game_framework/
+│       ├── GGF.gd
+│       ├── core/
+│       │   ├── managers/
+│       │   └── types/
+│       ├── resources/
+│       └── tests/
 ├── project.godot
 └── README.md
 ```
@@ -195,7 +190,7 @@ This framework is provided as-is for use in your projects.
 The framework includes a comprehensive testing system. See [TESTING.md](TESTING.md) for details.
 
 To run tests:
-1. Open `scenes/test/TestScene.tscn` in Godot
+1. Open `addons/godot_game_framework/tests/TestScene.tscn` in Godot
 2. Run the scene (F5)
 3. View test results in the output console
 
@@ -213,4 +208,4 @@ Each manager has comprehensive documentation including:
 
 ## Examples
 
-- **Multiplayer FPS (ENet, desktop)**: see [`docs/ExampleMultiplayerFPS.md`](docs/ExampleMultiplayerFPS.md)
+This repository is focused on the addon itself; example gameplay projects live outside this repo.

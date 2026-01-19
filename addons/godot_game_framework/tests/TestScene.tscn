@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://ggf_test_scene"]
+
+[ext_resource type="Script" path="res://addons/godot_game_framework/tests/TestRunner.gd" id="1_test_runner"]
+
+[node name="TestScene" type="Node"]
+script = ExtResource("1_test_runner")
+

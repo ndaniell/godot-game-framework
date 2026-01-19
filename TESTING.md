@@ -14,17 +14,17 @@ The test framework provides:
 
 ### Method 1: Create a Test Scene
 
-1. Create a new scene in Godot (Node as root)
-2. Attach the `TestRunner.gd` script to the root node
-3. Save the scene (e.g., `scenes/test/TestScene.tscn`)
-4. Run the scene (F5)
-5. Tests will automatically run and display results in the output console
+Run the addon’s test scene:
+
+1. Open `res://addons/godot_game_framework/tests/TestScene.tscn`
+2. Run the scene (F5)
+3. Tests will automatically run and display results in the output console
 
 ### Method 2: Programmatic Execution
 
 ```gdscript
 # In any script
-var test_runner = load("res://scripts/test/TestRunner.gd").new()
+var test_runner = load("res://addons/godot_game_framework/tests/TestRunner.gd").new()
 add_child(test_runner)
 test_runner.run_all_tests()
 ```
@@ -53,7 +53,7 @@ test_framework.run_test_suite("MySuite", tests)
 ```gdscript
 func my_test() -> bool:
     # Use assertions
-    test_framework.assert_not_null(MyManager, "Manager should exist")
+    test_framework.assert_not_null(GGF.get_manager(&"MyManager"), "Manager should exist")
     test_framework.assert_equal(value1, value2, "Values should match")
     test_framework.assert_true(condition, "Condition should be true")
     return true  # Test passes
@@ -75,31 +75,29 @@ func my_test() -> bool:
 
 ```gdscript
 func test_audio_volume() -> bool:
-    var original = AudioManager.master_volume
+    var audio = GGF.get_manager(&"AudioManager")
+    var original = audio.master_volume
     
     # Test setting volume
-    AudioManager.set_master_volume(0.5)
-    test_framework.assert_almost_equal(AudioManager.master_volume, 0.5, 0.01)
+    audio.set_master_volume(0.5)
+    test_framework.assert_almost_equal(audio.master_volume, 0.5, 0.01)
     
     # Test clamping
-    AudioManager.set_master_volume(2.0)
-    test_framework.assert_almost_equal(AudioManager.master_volume, 1.0, 0.01)
+    audio.set_master_volume(2.0)
+    test_framework.assert_almost_equal(audio.master_volume, 1.0, 0.01)
     
     # Restore original
-    AudioManager.set_master_volume(original)
+    audio.set_master_volume(original)
     return true
 ```
 
 ## Test Structure
 
 ```
-scripts/test/
+addons/godot_game_framework/tests/
 ├── TestFramework.gd      # Core testing utilities
 ├── TestRunner.gd         # Main test runner
-└── ManagerTests.gd        # Comprehensive manager tests
-
-scenes/test/
-└── TestScene.tscn        # Test scene for running tests
+└── ManagerTests.gd       # Addon manager tests
 ```
 
 ## Test Output
@@ -130,7 +128,7 @@ Success rate: 97.2%
 
 ### Adding Tests to Existing Suite
 
-Edit `scripts/test/ManagerTests.gd` and add your test function:
+Edit `addons/godot_game_framework/tests/ManagerTests.gd` and add your test function:
 
 ```gdscript
 func run_audio_manager_tests() -> void:
@@ -215,20 +213,19 @@ The test framework can be integrated into CI/CD pipelines:
 
 ```bash
 # Run Godot headless and execute tests
-godot --headless --script scripts/test/TestRunner.gd
+godot --headless --main-pack project.godot --quit --path . --scene "res://addons/godot_game_framework/tests/TestScene.tscn"
 ```
 
 ## Troubleshooting
 
 ### Tests Not Running
 
-- Ensure managers are loaded as autoload singletons
-- Check that TestScene is set as the main scene (if using scene method)
+- Ensure `GGF` is present as the single autoload (it bootstraps all managers)
 - Verify test functions return `bool`
 
 ### Linter Warnings for Managers
 
-Manager references (AudioManager, GameManager, etc.) are autoload singletons available at runtime. The linter may show "not declared" errors - **this is expected and safe to ignore**. They work correctly when the game runs.
+Managers are instantiated by `GGF`; access them via `GGF.get_manager(...)` to avoid “not declared” lints.
 
 ### False Positives
 

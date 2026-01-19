@@ -27,7 +27,7 @@ The `GameManager` is a flexible game state management system that:
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `states_config_path` | String | `"res://resources/data/game_states.tres"` | Path to state machine configuration |
+| `states_config_path` | String | `"res://addons/godot_game_framework/resources/data/game_states.tres"` | Path to state machine configuration |
 | `current_state` | String | "" | Current game state name |
 | `is_paused` | bool | false | Whether the game is paused |
 | `current_scene_path` | String | "" | Path to the current scene |

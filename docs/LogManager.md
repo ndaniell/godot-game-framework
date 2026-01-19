@@ -257,5 +257,3 @@ LogManager.enable_file_logging = false  # Disable file logging if needed
 
 - [NetworkManager](NetworkManager.md) - For multiplayer networking
 - [GameManager](GameManager.md) - For game state management
-- [ExampleMultiplayerFPS.md](ExampleMultiplayerFPS.md) - Multi-instance logging example</contents>
-</xai:function_call">New file created at: /home/paradox/git/godot-game-framework/docs/LogManager.md

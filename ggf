@@ -388,7 +388,7 @@ func _initialize():
     await process_frame
     
     # Load and run test runner
-    var test_runner_script = load("res://scripts/test/TestRunner.gd")
+    var test_runner_script = load("res://addons/godot_game_framework/tests/TestRunner.gd")
     if test_runner_script == null:
         print("ERROR: Could not load TestRunner.gd")
         quit(1)
