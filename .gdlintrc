@@ -1,0 +1,12 @@
+# gdlint configuration for gdtoolkit.
+#
+# This project follows the Godot GDScript style guide, with an intentional
+# exception for manager `class_name` values prefixed with `GGF_`.
+
+disable: []
+
+# Allow both `GameStateDefinition` and `GGF_LogManager`-style class names.
+class-name: (GGF_)?([A-Z][a-z0-9]*)+
+
+# Inner classes commonly start with `_` when private.
+sub-class-name: _?([A-Z][a-z0-9]*)+

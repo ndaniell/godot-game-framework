@@ -16,7 +16,7 @@ enum InputMode {
 	KEYBOARD_MOUSE,
 	GAMEPAD,
 	TOUCH,
-	AUTO
+	AUTO,
 }
 
 # Current input mode

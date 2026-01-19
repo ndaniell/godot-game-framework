@@ -237,7 +237,7 @@ func _prepare_save_data(slot: int, metadata: Dictionary) -> Dictionary:
 		"timestamp": Time.get_unix_time_from_system(),
 		"slot": slot,
 		"metadata": metadata,
-		"game_data": _collect_game_data()
+		"game_data": _collect_game_data(),
 	}
 	return save_dict
 
@@ -247,7 +247,7 @@ func _collect_game_data() -> Dictionary:
 	var game_data := {
 		"scene": get_tree().current_scene.scene_file_path if get_tree().current_scene else "",
 		"player_data": _collect_player_data(),
-		"world_data": _collect_world_data()
+		"world_data": _collect_world_data(),
 	}
 	return game_data
 

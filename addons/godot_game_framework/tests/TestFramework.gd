@@ -75,7 +75,7 @@ func run_test(test_name: String, test_func: Callable) -> bool:
 	_test_results[test_name] = {
 		"passed": passed,
 		"message": message,
-		"duration": duration
+		"duration": duration,
 	}
 	
 	# Cleanup
@@ -179,7 +179,7 @@ func _fail_test(message: String) -> void:
 	_test_results[_current_test] = {
 		"passed": false,
 		"message": message,
-		"duration": 0
+		"duration": 0,
 	}
 
 ## Get test results
@@ -200,7 +200,7 @@ func get_test_stats() -> Dictionary:
 		"total": _test_count,
 		"passed": _passed_count,
 		"failed": _failed_count,
-		"success_rate": float(_passed_count) / float(_test_count) if _test_count > 0 else 0.0
+		"success_rate": float(_passed_count) / float(_test_count) if _test_count > 0 else 0.0,
 	}
 
 ## Reset test framework
@@ -282,7 +282,7 @@ func run_test_suite(suite_name: String, tests: Dictionary, setup: Callable = Cal
 		"total": suite_total,
 		"passed": suite_passed,
 		"failed": suite_failed,
-		"success_rate": float(suite_passed) / float(suite_total) if suite_total > 0 else 0.0
+		"success_rate": float(suite_passed) / float(suite_total) if suite_total > 0 else 0.0,
 	}
 	
 	test_suite_completed.emit(suite_passed, suite_failed, suite_total)
@@ -385,6 +385,6 @@ func run_registered_suites(registry: RefCounted) -> Dictionary:
 		"total": total_tests,
 		"passed": total_passed,
 		"failed": total_failed,
-		"all_passed": all_passed
+		"all_passed": all_passed,
 	}
 

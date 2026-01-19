@@ -1,0 +1,21 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+        args: ["--markdown-linebreak-ext=md"]
+
+  - repo: local
+    hooks:
+      - id: gdformat
+        name: gdformat (GDScript formatter)
+        entry: gdformat
+        language: system
+        files: ^addons/godot_game_framework/.*\.gd$
+
+      - id: gdlint
+        name: gdlint (GDScript linter)
+        entry: gdlint
+        language: system
+        files: ^addons/godot_game_framework/.*\.gd$

@@ -108,18 +108,18 @@ func _initialize_settings() -> void:
 		"fullscreen": fullscreen,
 		"vsync_mode": vsync_mode,
 		"resolution": resolution,
-		"window_mode": window_mode
+		"window_mode": window_mode,
 	}
 	
 	_settings["audio"] = {
 		"master_volume": master_volume,
 		"music_volume": music_volume,
-		"sfx_volume": sfx_volume
+		"sfx_volume": sfx_volume,
 	}
 	
 	_settings["gameplay"] = {
 		"difficulty": difficulty,
-		"language": language
+		"language": language,
 	}
 
 ## Load settings from file
@@ -229,18 +229,18 @@ func _update_settings_dict() -> void:
 		"fullscreen": fullscreen,
 		"vsync_mode": vsync_mode,
 		"resolution": resolution,
-		"window_mode": window_mode
+		"window_mode": window_mode,
 	}
 	
 	_settings["audio"] = {
 		"master_volume": master_volume,
 		"music_volume": music_volume,
-		"sfx_volume": sfx_volume
+		"sfx_volume": sfx_volume,
 	}
 	
 	_settings["gameplay"] = {
 		"difficulty": difficulty,
-		"language": language
+		"language": language,
 	}
 
 ## Set a setting value
@@ -359,7 +359,7 @@ func _setting_changed(category: String, key: String, value: Variant) -> void:
 		event_manager.emit("setting_changed", {
 			"category": category,
 			"key": key,
-			"value": value
+			"value": value,
 		})
 	_on_setting_changed(category, key, value)
 

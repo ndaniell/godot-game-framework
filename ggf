@@ -39,8 +39,14 @@ show_help() {
     echo "${GREEN}Commands:${NC}"
     echo "    ${YELLOW}install${NC}           Download and install Godot engine"
     echo "    ${YELLOW}test [--verbose]${NC}  Run framework tests (use --verbose to see all warnings)"
+    echo "    ${YELLOW}lint${NC}              Lint addon GDScript (gdlint)"
+    echo "    ${YELLOW}format [--check]${NC}  Format addon GDScript (gdformat)"
     echo "    ${YELLOW}export [options]${NC}  Export the project using presets in export_presets.cfg"
     echo "    ${YELLOW}help${NC}              Show this help message"
+    echo
+    echo "${GREEN}Lint/format options:${NC}"
+    echo "    ${YELLOW}--check${NC}           For format: do not write changes; exit non-zero if changes needed"
+    echo "    ${YELLOW}--diff${NC}            For format --check: print unified diff"
     echo
     echo "${GREEN}Export options:${NC}"
     echo "    ${YELLOW}--list${NC}            List available export presets"
@@ -51,12 +57,74 @@ show_help() {
     echo "    ggf install          Install Godot 4.5.1"
     echo "    ggf test             Run all framework tests"
     echo "    ggf test --verbose   Run tests with verbose output (shows all warnings)"
+    echo "    ggf lint             Run gdlint on addons/godot_game_framework"
+    echo "    ggf format           Run gdformat on addons/godot_game_framework (writes changes)"
+    echo "    ggf format --check --diff  Check formatting (CI-friendly)"
     echo "    ggf export           Export all presets defined in export_presets.cfg"
     echo "    ggf export --list    List export presets"
     echo "    ggf export --preset \"Linux\"     Export only the Linux preset"
     echo "    ggf help             Show this help message"
     echo
     echo "${GREEN}For more information, visit:${NC} https://godotengine.org/"
+}
+
+require_command() {
+    local cmd="$1"
+    local human_name="$2"
+
+    if command -v "$cmd" > /dev/null 2>&1; then
+        return 0
+    fi
+
+    echo "${RED}Error: '$cmd' not found.${NC}"
+    echo "${YELLOW}Install ${human_name} locally to use this command.${NC}"
+    echo "${YELLOW}Tip: see requirements-dev.txt and the CI workflow for the exact tools used.${NC}"
+    return 1
+}
+
+# Lint addon GDScript
+cmd_lint() {
+    echo "${BLUE}Linting addon GDScript...${NC}"
+    require_command "gdlint" "gdtoolkit" || exit 1
+
+    gdlint addons/godot_game_framework
+}
+
+# Format addon GDScript
+cmd_format() {
+    local CHECK=false
+    local DIFF=false
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --check)
+                CHECK=true
+                shift
+                ;;
+            --diff)
+                DIFF=true
+                shift
+                ;;
+            *)
+                echo "${YELLOW}Unknown option: $1${NC}"
+                echo "Use 'ggf help' for format options"
+                shift
+                ;;
+        esac
+    done
+
+    echo "${BLUE}Formatting addon GDScript...${NC}"
+    require_command "gdformat" "gdtoolkit" || exit 1
+
+    if [ "$CHECK" = true ]; then
+        if [ "$DIFF" = true ]; then
+            gdformat --check --diff addons/godot_game_framework
+        else
+            gdformat --check addons/godot_game_framework
+        fi
+    else
+        gdformat addons/godot_game_framework
+    fi
 }
 
 # Install Godot engine
@@ -468,6 +536,12 @@ main() {
             ;;
         test)
             cmd_test "$@"
+            ;;
+        lint)
+            cmd_lint "$@"
+            ;;
+        format)
+            cmd_format "$@"
             ;;
         export)
             cmd_export "$@"

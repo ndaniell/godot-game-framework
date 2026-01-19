@@ -54,7 +54,7 @@ func create_pool(pool_name: String, prefab: PackedScene, initial_size: int = -1)
 		"active": [],
 		"inactive": [],
 		"prefab": prefab,
-		"size": size
+		"size": size,
 	}
 	
 	# Pre-populate pool
@@ -267,7 +267,7 @@ func get_pool_stats(pool_name: String) -> Dictionary:
 		"active_count": (pool["active"] as Array).size(),
 		"inactive_count": (pool["inactive"] as Array).size(),
 		"total_count": (pool["active"] as Array).size() + (pool["inactive"] as Array).size(),
-		"size": pool["size"]
+		"size": pool["size"],
 	}
 
 ## Check if a pool exists

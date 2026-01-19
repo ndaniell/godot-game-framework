@@ -10,6 +10,15 @@ signal notification_shown(notification_id: String, data: Dictionary)
 signal notification_hidden(notification_id: String)
 signal notification_clicked(notification_id: String)
 
+# Notification types
+enum NotificationType {
+	INFO,
+	SUCCESS,
+	WARNING,
+	ERROR,
+	CUSTOM,
+}
+
 # Notification configuration
 @export_group("Notification Configuration")
 @export var default_duration: float = 3.0
@@ -17,15 +26,6 @@ signal notification_clicked(notification_id: String)
 @export var notification_spacing: float = 10.0
 @export var position: Vector2 = Vector2(20, 20)
 @export var alignment: Vector2 = Vector2(0, 0)  # 0 = top/left, 1 = bottom/right
-
-# Notification types
-enum NotificationType {
-	INFO,
-	SUCCESS,
-	WARNING,
-	ERROR,
-	CUSTOM
-}
 
 # Active notifications
 var _notifications: Dictionary = {}  # id -> { "node": Control, "data": Dictionary, "timer": Timer }
@@ -66,7 +66,7 @@ func show_notification(message: String, type: NotificationType = NotificationTyp
 			"message": message,
 			"type": type,
 			"duration": duration,
-			"data": data
+			"data": data,
 		})
 		return ""
 	
@@ -99,7 +99,7 @@ func show_notification(message: String, type: NotificationType = NotificationTyp
 		"data": data,
 		"timer": timer,
 		"type": type,
-		"message": message
+		"message": message,
 	}
 	
 	# Animate in

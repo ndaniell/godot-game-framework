@@ -150,7 +150,7 @@ func create_timer(timer_id: String, duration: float, loop: bool = false) -> bool
 		"duration": duration,
 		"elapsed": 0.0,
 		"loop": loop,
-		"paused": false
+		"paused": false,
 	}
 	
 	_on_timer_created(timer_id, duration, loop)

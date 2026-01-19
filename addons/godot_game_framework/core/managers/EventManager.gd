@@ -162,7 +162,7 @@ func _add_to_history(event_name: String, data: Dictionary) -> void:
 	_event_history.append({
 		"event": event_name,
 		"data": data.duplicate(),
-		"time": Time.get_ticks_msec()
+		"time": Time.get_ticks_msec(),
 	})
 	
 	# Limit history size

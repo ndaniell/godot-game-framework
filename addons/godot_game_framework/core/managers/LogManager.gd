@@ -20,7 +20,7 @@ enum LogLevel {
 	DEBUG = 1,
 	INFO = 2,
 	WARN = 3,
-	ERROR = 4
+	ERROR = 4,
 }
 
 # Configuration
@@ -55,7 +55,171 @@ var _is_server: bool = false
 var _log_file: FileAccess
 var _log_file_path: String = ""
 
-# Custom logger implementation
+# Custom logger implementation is defined at the end of the file (style guide: inner classes last).
+
+## Initialize the log manager
+func _init() -> void:
+	# Generate instance tag (PID by default, can be overridden)
+	_instance_tag = "pid=%d" % OS.get_process_id()
+
+	# Initialize file logging
+	_initialize_file_logging()
+
+	# Register custom logger for capturing engine messages
+	OS.add_logger(GameLogger.new(self))
+
+	# Initialize ring buffer as empty
+	_ring_buffer = []
+
+	info("LogManager", "LogManager initialized with level: %s" % LogLevel.keys()[current_level])
+
+## Initialize file logging
+func _initialize_file_logging() -> void:
+	if not enable_file_logging:
+		return
+
+	# Create logs directory if it doesn't exist
+	var dir := DirAccess.open("user://")
+	if dir and not dir.dir_exists("logs"):
+		dir.make_dir("logs")
+
+	# Generate log file path
+	var project_name := ProjectSettings.get_setting("application/config/name", "godot_game_framework") as String
+	project_name = project_name.replace(" ", "_").to_lower()
+
+	_log_file_path = log_filename_pattern.format({
+		"project": project_name,
+		"instance": _instance_tag.replace("=", "_").replace(" ", "_"),
+	})
+	_log_file_path = log_directory.path_join(_log_file_path)
+
+	# Open log file for writing
+	_log_file = FileAccess.open(_log_file_path, FileAccess.WRITE)
+	if _log_file:
+		info("LogManager", "File logging initialized: " + _log_file_path)
+	else:
+		warn("LogManager", "Failed to open log file: " + _log_file_path + " (error: " + str(FileAccess.get_open_error()) + ")")
+
+## Update peer ID and server status for logging context
+func update_network_context(peer_id: int = 0, is_server: bool = false) -> void:
+	_peer_id = peer_id
+	_is_server = is_server
+
+## Log a trace message
+func trace(category: String, message: String) -> void:
+	if current_level <= LogLevel.TRACE:
+		_log(LogLevel.TRACE, category, message)
+
+## Log a debug message
+func debug(category: String, message: String) -> void:
+	if current_level <= LogLevel.DEBUG:
+		_log(LogLevel.DEBUG, category, message)
+
+## Log an info message
+func info(category: String, message: String) -> void:
+	if current_level <= LogLevel.INFO:
+		_log(LogLevel.INFO, category, message)
+
+## Log a warning message
+func warn(category: String, message: String) -> void:
+	if current_level <= LogLevel.WARN:
+		_log(LogLevel.WARN, category, message)
+
+## Log an error message
+func error(category: String, message: String) -> void:
+	_log(LogLevel.ERROR, category, message)
+
+## Internal logging function
+func _log(level: LogLevel, category: String, message: String) -> void:
+	var level_name: String = LogLevel.keys()[level]
+	var timestamp := Time.get_time_string_from_system()
+
+	# Build instance/peer/role prefix
+	var prefix_parts: Array[String] = [_instance_tag]
+	if _peer_id > 0:
+		var role := "server" if _is_server else "client"
+		prefix_parts.append("peer=%d" % _peer_id)
+		prefix_parts.append("role=%s" % role)
+	var prefix := "[" + " ".join(prefix_parts) + "] "
+
+	var formatted_message := "[%s] [%s] %s%s: %s" % [timestamp, level_name, prefix, category, message]
+
+	# Route based on level
+	match level:
+		LogLevel.TRACE:
+			print_verbose(formatted_message)
+		LogLevel.DEBUG:
+			print_debug(formatted_message)
+		LogLevel.INFO:
+			print(formatted_message)
+		LogLevel.WARN:
+			if emit_engine_warnings:
+				push_warning(formatted_message)
+			else:
+				print(formatted_message)
+		LogLevel.ERROR:
+			push_error(formatted_message)
+
+	# Write to file if enabled
+	if enable_file_logging and _log_file:
+		_log_file.store_line(formatted_message)
+		_log_file.flush()  # Ensure immediate write
+
+	# Add to ring buffer
+	if enable_ring_buffer:
+		_add_to_ring_buffer({
+			"message": formatted_message,
+			"level": level_name,
+			"category": category,
+			"timestamp": Time.get_ticks_msec(),
+		})
+
+## Add entry to ring buffer (thread-safe)
+func _add_to_ring_buffer(entry: Dictionary) -> void:
+	_buffer_mutex.lock()
+	_ring_buffer.push_back(entry)
+	if _ring_buffer.size() > ring_buffer_size:
+		_ring_buffer.pop_front()
+	_buffer_mutex.unlock()
+
+## Get ring buffer contents (thread-safe copy)
+func get_ring_buffer() -> Array[Dictionary]:
+	_buffer_mutex.lock()
+	var copy := _ring_buffer.duplicate()
+	_buffer_mutex.unlock()
+	return copy
+
+## Clear ring buffer
+func clear_ring_buffer() -> void:
+	_buffer_mutex.lock()
+	_ring_buffer.clear()
+	_buffer_mutex.unlock()
+
+## Get current log level name
+func get_level_name() -> String:
+	return LogLevel.keys()[current_level]
+
+## Set log level by name
+func set_level_by_name(level_name: String) -> bool:
+	if not LogLevel.has(level_name.to_upper()):
+		warn("LogManager", "Invalid log level name: %s" % level_name)
+		return false
+
+	current_level = LogLevel[level_name.to_upper()]
+	return true
+
+## Called when log level changes
+func _on_level_changed(_new_level: LogLevel) -> void:
+	info("LogManager", "Log level changed to: %s" % get_level_name())
+
+func _exit_tree() -> void:
+	# Clean up file logging
+	if _log_file:
+		_log_file.close()
+		_log_file = null
+
+
+# Custom logger implementation (inner class).
 class GameLogger extends Logger:
 	var _log_manager_ref: WeakRef
 
@@ -70,7 +234,7 @@ class GameLogger extends Logger:
 				"message": message,
 				"level": "ERROR" if error else "INFO",
 				"timestamp": Time.get_ticks_msec(),
-				"source": "engine"
+				"source": "engine",
 			})
 
 	func _log_error(
@@ -175,167 +339,5 @@ class GameLogger extends Logger:
 				"error_code": code,
 				"error_type": error_type_name,
 				"editor_notify": editor_notify,
-				"backtrace_count": script_backtraces.size()
+				"backtrace_count": script_backtraces.size(),
 			})
-
-## Initialize the log manager
-func _init() -> void:
-	# Generate instance tag (PID by default, can be overridden)
-	_instance_tag = "pid=%d" % OS.get_process_id()
-
-	# Initialize file logging
-	_initialize_file_logging()
-
-	# Register custom logger for capturing engine messages
-	OS.add_logger(GameLogger.new(self))
-
-	# Initialize ring buffer as empty
-	_ring_buffer = []
-
-	info("LogManager", "LogManager initialized with level: %s" % LogLevel.keys()[current_level])
-
-## Initialize file logging
-func _initialize_file_logging() -> void:
-	if not enable_file_logging:
-		return
-
-	# Create logs directory if it doesn't exist
-	var dir := DirAccess.open("user://")
-	if dir and not dir.dir_exists("logs"):
-		dir.make_dir("logs")
-
-	# Generate log file path
-	var project_name := ProjectSettings.get_setting("application/config/name", "godot_game_framework") as String
-	project_name = project_name.replace(" ", "_").to_lower()
-
-	_log_file_path = log_filename_pattern.format({
-		"project": project_name,
-		"instance": _instance_tag.replace("=", "_").replace(" ", "_")
-	})
-	_log_file_path = log_directory.path_join(_log_file_path)
-
-	# Open log file for writing
-	_log_file = FileAccess.open(_log_file_path, FileAccess.WRITE)
-	if _log_file:
-		info("LogManager", "File logging initialized: " + _log_file_path)
-	else:
-		warn("LogManager", "Failed to open log file: " + _log_file_path + " (error: " + str(FileAccess.get_open_error()) + ")")
-
-## Update peer ID and server status for logging context
-func update_network_context(peer_id: int = 0, is_server: bool = false) -> void:
-	_peer_id = peer_id
-	_is_server = is_server
-
-## Log a trace message
-func trace(category: String, message: String) -> void:
-	if current_level <= LogLevel.TRACE:
-		_log(LogLevel.TRACE, category, message)
-
-## Log a debug message
-func debug(category: String, message: String) -> void:
-	if current_level <= LogLevel.DEBUG:
-		_log(LogLevel.DEBUG, category, message)
-
-## Log an info message
-func info(category: String, message: String) -> void:
-	if current_level <= LogLevel.INFO:
-		_log(LogLevel.INFO, category, message)
-
-## Log a warning message
-func warn(category: String, message: String) -> void:
-	if current_level <= LogLevel.WARN:
-		_log(LogLevel.WARN, category, message)
-
-## Log an error message
-func error(category: String, message: String) -> void:
-	_log(LogLevel.ERROR, category, message)
-
-## Internal logging function
-func _log(level: LogLevel, category: String, message: String) -> void:
-	var level_name: String = LogLevel.keys()[level]
-	var timestamp := Time.get_time_string_from_system()
-
-	# Build instance/peer/role prefix
-	var prefix_parts: Array[String] = [_instance_tag]
-	if _peer_id > 0:
-		var role := "server" if _is_server else "client"
-		prefix_parts.append("peer=%d" % _peer_id)
-		prefix_parts.append("role=%s" % role)
-	var prefix := "[" + " ".join(prefix_parts) + "] "
-
-	var formatted_message := "[%s] [%s] %s%s: %s" % [timestamp, level_name, prefix, category, message]
-
-	# Route based on level
-	match level:
-		LogLevel.TRACE:
-			print_verbose(formatted_message)
-		LogLevel.DEBUG:
-			print_debug(formatted_message)
-		LogLevel.INFO:
-			print(formatted_message)
-		LogLevel.WARN:
-			if emit_engine_warnings:
-				push_warning(formatted_message)
-			else:
-				print(formatted_message)
-		LogLevel.ERROR:
-			push_error(formatted_message)
-
-	# Write to file if enabled
-	if enable_file_logging and _log_file:
-		_log_file.store_line(formatted_message)
-		_log_file.flush()  # Ensure immediate write
-
-	# Add to ring buffer
-	if enable_ring_buffer:
-		_add_to_ring_buffer({
-			"message": formatted_message,
-			"level": level_name,
-			"category": category,
-			"timestamp": Time.get_ticks_msec()
-		})
-
-## Add entry to ring buffer (thread-safe)
-func _add_to_ring_buffer(entry: Dictionary) -> void:
-	_buffer_mutex.lock()
-	_ring_buffer.push_back(entry)
-	if _ring_buffer.size() > ring_buffer_size:
-		_ring_buffer.pop_front()
-	_buffer_mutex.unlock()
-
-## Get ring buffer contents (thread-safe copy)
-func get_ring_buffer() -> Array[Dictionary]:
-	_buffer_mutex.lock()
-	var copy := _ring_buffer.duplicate()
-	_buffer_mutex.unlock()
-	return copy
-
-## Clear ring buffer
-func clear_ring_buffer() -> void:
-	_buffer_mutex.lock()
-	_ring_buffer.clear()
-	_buffer_mutex.unlock()
-
-## Get current log level name
-func get_level_name() -> String:
-	return LogLevel.keys()[current_level]
-
-## Set log level by name
-func set_level_by_name(level_name: String) -> bool:
-	if not LogLevel.has(level_name.to_upper()):
-		warn("LogManager", "Invalid log level name: %s" % level_name)
-		return false
-
-	current_level = LogLevel[level_name.to_upper()]
-	return true
-
-## Called when log level changes
-func _on_level_changed(_new_level: LogLevel) -> void:
-	info("LogManager", "Log level changed to: %s" % get_level_name())
-
-func _exit_tree() -> void:
-	# Clean up file logging
-	if _log_file:
-		_log_file.close()
-		_log_file = null
-

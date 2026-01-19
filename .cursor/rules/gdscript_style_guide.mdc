@@ -1,0 +1,71 @@
+---
+description: "Godot GDScript style guide (formatting, naming, code order) for the framework addon."
+globs: ["addons/godot_game_framework/**/*.gd"]
+---
+
+## Scope
+
+These rules apply to GDScript files under `addons/godot_game_framework/**`.
+
+## Baseline: follow the official style guide
+
+Follow Godot’s **GDScript style guide**: `https://docs.godotengine.org/en/latest/tutorials/scripting/gdscript/gdscript_styleguide.html#doc-gdscript-styleguide`
+
+## Formatting
+
+- **Indentation**: use **tabs** for indentation. Do not indent with spaces.
+- **Line endings**: use LF and ensure there is a trailing newline at end-of-file.
+- **Line length**: keep lines under **100 characters** (prefer 80 when reasonable).
+- **Whitespace**:
+  - One space around operators and after commas.
+  - No spaces inside `()` in calls/expressions: `foo(bar)` not `foo ( bar )`.
+  - No vertical alignment spacing (don’t align `=` across lines).
+- **One statement per line** (no `if x: y`).
+- **Boolean operators**: prefer `and` / `or` / `not` (avoid `&&` / `||` / `!`).
+- **Quotes**: prefer double quotes unless single quotes reduce escaping.
+
+## Multiline literals: always trailing comma
+
+For multiline:
+
+- arrays `[...]`
+- dictionaries `{...}`
+- enums `enum Foo { ... }`
+
+Use a **trailing comma** on the last item.
+
+## Naming conventions
+
+- **Functions & variables**: `snake_case`
+- **Private** members: prefix with `_` (e.g. `_buffer_mutex`)
+- **Signals**: `snake_case` and past tense (e.g. `door_opened`)
+- **Constants**: `CONSTANT_CASE`
+- **Enums**: enum name `PascalCase`, members `CONSTANT_CASE`
+
+## Code order (top-to-bottom readability)
+
+Within a script, prefer this order (from the style guide):
+
+1. `@tool` / `@icon` / `@static_unload` (if used)
+2. `class_name`
+3. `extends`
+4. Doc comment (`##`)
+5. `signal` declarations
+6. `enum` declarations
+7. `const` declarations
+8. `@export` vars
+9. regular vars
+10. `@onready` vars
+11. `_init()`, `_enter_tree()`, `_ready()`, `_process()`, `_physics_process()`, other virtuals
+12. public API methods
+13. private helper methods (prefixed `_`)
+14. inner classes (last)
+
+## Framework-specific exceptions (do not “fix” by renaming)
+
+The addon already uses some public naming conventions that differ from the style guide:
+
+- Manager scripts use `class_name GGF_*` and `PascalCase` filenames (e.g. `LogManager.gd`).
+
+Do **not** rename existing files/classes just to satisfy the style guide. Only apply the naming rules to **new** files/classes unless there’s an explicit refactor request.
+

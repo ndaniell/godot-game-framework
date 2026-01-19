@@ -27,7 +27,7 @@ func _ready() -> void:
 	if tree:
 		await tree.process_frame
 		# Only wait one frame in headless mode
-		if not DisplayServer.get_name() == "headless":
+		if DisplayServer.get_name() != "headless":
 			await tree.process_frame
 
 	# Avoid engine WARNING output during tests (AssetLib recommendation: no warnings).
@@ -36,7 +36,7 @@ func _ready() -> void:
 		var log_manager: Node = ggf.get_manager(&"LogManager") as Node
 		if log_manager != null and log_manager.has_method("set"):
 			log_manager.set("emit_engine_warnings", false)
-	
+
 	# Initialize test framework
 	var framework_script = load("res://addons/godot_game_framework/tests/TestFramework.gd")
 	if framework_script == null:
@@ -47,14 +47,14 @@ func _ready() -> void:
 		if test_framework.has_method("set"):
 			test_framework.set("stop_on_first_failure", stop_on_first_failure)
 		add_child(test_framework)
-	
+
 	# Initialize test registry
 	var registry_script = load("res://addons/godot_game_framework/tests/TestRegistry.gd")
 	if registry_script == null:
 		push_error("TestRunner: Failed to load TestRegistry.gd")
 		return
 	test_registry = registry_script.new() as RefCounted
-	
+
 	# Register default test suites
 	if discover_tests:
 		_register_default_test_suites()

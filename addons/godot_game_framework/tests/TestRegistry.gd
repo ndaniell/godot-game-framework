@@ -36,7 +36,7 @@ func register_suite(suite_name: String, tests: Dictionary, setup: Callable = Cal
 		"tests": test_methods,
 		"setup": setup,
 		"teardown": teardown,
-		"source": source
+		"source": source,
 	}
 
 ## Unregister a test suite
@@ -79,7 +79,7 @@ func get_suite(suite_name: String) -> Dictionary:
 	return {
 		"tests": tests,
 		"setup": suite.get("setup", Callable()),
-		"teardown": suite.get("teardown", Callable())
+		"teardown": suite.get("teardown", Callable()),
 	}
 
 ## Check if suite exists
