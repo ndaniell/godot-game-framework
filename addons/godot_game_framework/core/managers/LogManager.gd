@@ -57,6 +57,7 @@ var _log_file_path: String = ""
 
 # Custom logger implementation is defined at the end of the file (style guide: inner classes last).
 
+
 ## Initialize the log manager
 func _init() -> void:
 	# Generate instance tag (PID by default, can be overridden)
@@ -73,6 +74,7 @@ func _init() -> void:
 
 	info("LogManager", "LogManager initialized with level: %s" % LogLevel.keys()[current_level])
 
+
 ## Initialize file logging
 func _initialize_file_logging() -> void:
 	if not enable_file_logging:
@@ -84,13 +86,20 @@ func _initialize_file_logging() -> void:
 		dir.make_dir("logs")
 
 	# Generate log file path
-	var project_name := ProjectSettings.get_setting("application/config/name", "godot_game_framework") as String
+	var project_name := (
+		ProjectSettings.get_setting("application/config/name", "godot_game_framework") as String
+	)
 	project_name = project_name.replace(" ", "_").to_lower()
 
-	_log_file_path = log_filename_pattern.format({
-		"project": project_name,
-		"instance": _instance_tag.replace("=", "_").replace(" ", "_"),
-	})
+	_log_file_path = (
+		log_filename_pattern
+		. format(
+			{
+				"project": project_name,
+				"instance": _instance_tag.replace("=", "_").replace(" ", "_"),
+			}
+		)
+	)
 	_log_file_path = log_directory.path_join(_log_file_path)
 
 	# Open log file for writing
@@ -98,36 +107,52 @@ func _initialize_file_logging() -> void:
 	if _log_file:
 		info("LogManager", "File logging initialized: " + _log_file_path)
 	else:
-		warn("LogManager", "Failed to open log file: " + _log_file_path + " (error: " + str(FileAccess.get_open_error()) + ")")
+		warn(
+			"LogManager",
+			(
+				"Failed to open log file: "
+				+ _log_file_path
+				+ " (error: "
+				+ str(FileAccess.get_open_error())
+				+ ")"
+			)
+		)
+
 
 ## Update peer ID and server status for logging context
 func update_network_context(peer_id: int = 0, is_server: bool = false) -> void:
 	_peer_id = peer_id
 	_is_server = is_server
 
+
 ## Log a trace message
 func trace(category: String, message: String) -> void:
 	if current_level <= LogLevel.TRACE:
 		_log(LogLevel.TRACE, category, message)
+
 
 ## Log a debug message
 func debug(category: String, message: String) -> void:
 	if current_level <= LogLevel.DEBUG:
 		_log(LogLevel.DEBUG, category, message)
 
+
 ## Log an info message
 func info(category: String, message: String) -> void:
 	if current_level <= LogLevel.INFO:
 		_log(LogLevel.INFO, category, message)
+
 
 ## Log a warning message
 func warn(category: String, message: String) -> void:
 	if current_level <= LogLevel.WARN:
 		_log(LogLevel.WARN, category, message)
 
+
 ## Log an error message
 func error(category: String, message: String) -> void:
 	_log(LogLevel.ERROR, category, message)
+
 
 ## Internal logging function
 func _log(level: LogLevel, category: String, message: String) -> void:
@@ -142,7 +167,9 @@ func _log(level: LogLevel, category: String, message: String) -> void:
 		prefix_parts.append("role=%s" % role)
 	var prefix := "[" + " ".join(prefix_parts) + "] "
 
-	var formatted_message := "[%s] [%s] %s%s: %s" % [timestamp, level_name, prefix, category, message]
+	var formatted_message := (
+		"[%s] [%s] %s%s: %s" % [timestamp, level_name, prefix, category, message]
+	)
 
 	# Route based on level
 	match level:
@@ -167,12 +194,15 @@ func _log(level: LogLevel, category: String, message: String) -> void:
 
 	# Add to ring buffer
 	if enable_ring_buffer:
-		_add_to_ring_buffer({
-			"message": formatted_message,
-			"level": level_name,
-			"category": category,
-			"timestamp": Time.get_ticks_msec(),
-		})
+		_add_to_ring_buffer(
+			{
+				"message": formatted_message,
+				"level": level_name,
+				"category": category,
+				"timestamp": Time.get_ticks_msec(),
+			}
+		)
+
 
 ## Add entry to ring buffer (thread-safe)
 func _add_to_ring_buffer(entry: Dictionary) -> void:
@@ -182,6 +212,7 @@ func _add_to_ring_buffer(entry: Dictionary) -> void:
 		_ring_buffer.pop_front()
 	_buffer_mutex.unlock()
 
+
 ## Get ring buffer contents (thread-safe copy)
 func get_ring_buffer() -> Array[Dictionary]:
 	_buffer_mutex.lock()
@@ -189,15 +220,18 @@ func get_ring_buffer() -> Array[Dictionary]:
 	_buffer_mutex.unlock()
 	return copy
 
+
 ## Clear ring buffer
 func clear_ring_buffer() -> void:
 	_buffer_mutex.lock()
 	_ring_buffer.clear()
 	_buffer_mutex.unlock()
 
+
 ## Get current log level name
 func get_level_name() -> String:
 	return LogLevel.keys()[current_level]
+
 
 ## Set log level by name
 func set_level_by_name(level_name: String) -> bool:
@@ -208,9 +242,11 @@ func set_level_by_name(level_name: String) -> bool:
 	current_level = LogLevel[level_name.to_upper()]
 	return true
 
+
 ## Called when log level changes
 func _on_level_changed(_new_level: LogLevel) -> void:
 	info("LogManager", "Log level changed to: %s" % get_level_name())
+
 
 func _exit_tree() -> void:
 	# Clean up file logging
@@ -220,7 +256,8 @@ func _exit_tree() -> void:
 
 
 # Custom logger implementation (inner class).
-class GameLogger extends Logger:
+class GameLogger:
+	extends Logger
 	var _log_manager_ref: WeakRef
 
 	func _init(log_manager) -> void:
@@ -230,22 +267,27 @@ class GameLogger extends Logger:
 		# Only capture and store - don't print to avoid recursion
 		var log_manager := _log_manager_ref.get_ref()
 		if log_manager and log_manager.enable_ring_buffer:
-			log_manager._add_to_ring_buffer({
-				"message": message,
-				"level": "ERROR" if error else "INFO",
-				"timestamp": Time.get_ticks_msec(),
-				"source": "engine",
-			})
+			(
+				log_manager
+				. _add_to_ring_buffer(
+					{
+						"message": message,
+						"level": "ERROR" if error else "INFO",
+						"timestamp": Time.get_ticks_msec(),
+						"source": "engine",
+					}
+				)
+			)
 
 	func _log_error(
-			function: String,
-			file: String,
-			line: int,
-			code: String,
-			rationale: String,
-			editor_notify: bool,
-			error_type: int,
-			script_backtraces: Array[ScriptBacktrace]
+		function: String,
+		file: String,
+		line: int,
+		code: String,
+		rationale: String,
+		editor_notify: bool,
+		error_type: int,
+		script_backtraces: Array[ScriptBacktrace]
 	) -> void:
 		# Only capture and store - don't print to avoid recursion
 		var log_manager := _log_manager_ref.get_ref()
@@ -278,66 +320,120 @@ class GameLogger extends Logger:
 			# Get error type name - use basic mapping for common errors
 			var error_type_name := "UNKNOWN"
 			match error_type:
-				Error.OK: error_type_name = "OK"
-				Error.FAILED: error_type_name = "FAILED"
-				Error.ERR_UNAVAILABLE: error_type_name = "UNAVAILABLE"
-				Error.ERR_UNCONFIGURED: error_type_name = "UNCONFIGURED"
-				Error.ERR_UNAUTHORIZED: error_type_name = "UNAUTHORIZED"
-				Error.ERR_PARAMETER_RANGE_ERROR: error_type_name = "PARAMETER_RANGE_ERROR"
-				Error.ERR_OUT_OF_MEMORY: error_type_name = "OUT_OF_MEMORY"
-				Error.ERR_FILE_NOT_FOUND: error_type_name = "FILE_NOT_FOUND"
-				Error.ERR_FILE_BAD_DRIVE: error_type_name = "FILE_BAD_DRIVE"
-				Error.ERR_FILE_BAD_PATH: error_type_name = "FILE_BAD_PATH"
-				Error.ERR_FILE_NO_PERMISSION: error_type_name = "FILE_NO_PERMISSION"
-				Error.ERR_FILE_ALREADY_IN_USE: error_type_name = "FILE_ALREADY_IN_USE"
-				Error.ERR_FILE_CANT_OPEN: error_type_name = "FILE_CANT_OPEN"
-				Error.ERR_FILE_CANT_WRITE: error_type_name = "FILE_CANT_WRITE"
-				Error.ERR_FILE_CANT_READ: error_type_name = "FILE_CANT_READ"
-				Error.ERR_FILE_UNRECOGNIZED: error_type_name = "FILE_UNRECOGNIZED"
-				Error.ERR_FILE_CORRUPT: error_type_name = "FILE_CORRUPT"
-				Error.ERR_FILE_MISSING_DEPENDENCIES: error_type_name = "FILE_MISSING_DEPENDENCIES"
-				Error.ERR_FILE_EOF: error_type_name = "FILE_EOF"
-				Error.ERR_CANT_OPEN: error_type_name = "CANT_OPEN"
-				Error.ERR_CANT_CREATE: error_type_name = "CANT_CREATE"
-				Error.ERR_QUERY_FAILED: error_type_name = "QUERY_FAILED"
-				Error.ERR_ALREADY_IN_USE: error_type_name = "ALREADY_IN_USE"
-				Error.ERR_LOCKED: error_type_name = "LOCKED"
-				Error.ERR_TIMEOUT: error_type_name = "TIMEOUT"
-				Error.ERR_CANT_CONNECT: error_type_name = "CANT_CONNECT"
-				Error.ERR_CANT_RESOLVE: error_type_name = "CANT_RESOLVE"
-				Error.ERR_CONNECTION_ERROR: error_type_name = "CONNECTION_ERROR"
-				Error.ERR_CANT_ACQUIRE_RESOURCE: error_type_name = "CANT_ACQUIRE_RESOURCE"
-				Error.ERR_CANT_FORK: error_type_name = "CANT_FORK"
-				Error.ERR_INVALID_DATA: error_type_name = "INVALID_DATA"
-				Error.ERR_INVALID_PARAMETER: error_type_name = "INVALID_PARAMETER"
-				Error.ERR_ALREADY_EXISTS: error_type_name = "ALREADY_EXISTS"
-				Error.ERR_DOES_NOT_EXIST: error_type_name = "DOES_NOT_EXIST"
-				Error.ERR_DATABASE_CANT_READ: error_type_name = "DATABASE_CANT_READ"
-				Error.ERR_DATABASE_CANT_WRITE: error_type_name = "DATABASE_CANT_WRITE"
-				Error.ERR_COMPILATION_FAILED: error_type_name = "COMPILATION_FAILED"
-				Error.ERR_METHOD_NOT_FOUND: error_type_name = "METHOD_NOT_FOUND"
-				Error.ERR_LINK_FAILED: error_type_name = "LINK_FAILED"
-				Error.ERR_SCRIPT_FAILED: error_type_name = "SCRIPT_FAILED"
-				Error.ERR_CYCLIC_LINK: error_type_name = "CYCLIC_LINK"
-				Error.ERR_INVALID_DECLARATION: error_type_name = "INVALID_DECLARATION"
-				Error.ERR_DUPLICATE_SYMBOL: error_type_name = "DUPLICATE_SYMBOL"
-				Error.ERR_PARSE_ERROR: error_type_name = "PARSE_ERROR"
-				Error.ERR_BUSY: error_type_name = "BUSY"
-				Error.ERR_SKIP: error_type_name = "SKIP"
-				Error.ERR_HELP: error_type_name = "HELP"
-				Error.ERR_BUG: error_type_name = "BUG"
-				Error.ERR_PRINTER_ON_FIRE: error_type_name = "PRINTER_ON_FIRE"
+				Error.OK:
+					error_type_name = "OK"
+				Error.FAILED:
+					error_type_name = "FAILED"
+				Error.ERR_UNAVAILABLE:
+					error_type_name = "UNAVAILABLE"
+				Error.ERR_UNCONFIGURED:
+					error_type_name = "UNCONFIGURED"
+				Error.ERR_UNAUTHORIZED:
+					error_type_name = "UNAUTHORIZED"
+				Error.ERR_PARAMETER_RANGE_ERROR:
+					error_type_name = "PARAMETER_RANGE_ERROR"
+				Error.ERR_OUT_OF_MEMORY:
+					error_type_name = "OUT_OF_MEMORY"
+				Error.ERR_FILE_NOT_FOUND:
+					error_type_name = "FILE_NOT_FOUND"
+				Error.ERR_FILE_BAD_DRIVE:
+					error_type_name = "FILE_BAD_DRIVE"
+				Error.ERR_FILE_BAD_PATH:
+					error_type_name = "FILE_BAD_PATH"
+				Error.ERR_FILE_NO_PERMISSION:
+					error_type_name = "FILE_NO_PERMISSION"
+				Error.ERR_FILE_ALREADY_IN_USE:
+					error_type_name = "FILE_ALREADY_IN_USE"
+				Error.ERR_FILE_CANT_OPEN:
+					error_type_name = "FILE_CANT_OPEN"
+				Error.ERR_FILE_CANT_WRITE:
+					error_type_name = "FILE_CANT_WRITE"
+				Error.ERR_FILE_CANT_READ:
+					error_type_name = "FILE_CANT_READ"
+				Error.ERR_FILE_UNRECOGNIZED:
+					error_type_name = "FILE_UNRECOGNIZED"
+				Error.ERR_FILE_CORRUPT:
+					error_type_name = "FILE_CORRUPT"
+				Error.ERR_FILE_MISSING_DEPENDENCIES:
+					error_type_name = "FILE_MISSING_DEPENDENCIES"
+				Error.ERR_FILE_EOF:
+					error_type_name = "FILE_EOF"
+				Error.ERR_CANT_OPEN:
+					error_type_name = "CANT_OPEN"
+				Error.ERR_CANT_CREATE:
+					error_type_name = "CANT_CREATE"
+				Error.ERR_QUERY_FAILED:
+					error_type_name = "QUERY_FAILED"
+				Error.ERR_ALREADY_IN_USE:
+					error_type_name = "ALREADY_IN_USE"
+				Error.ERR_LOCKED:
+					error_type_name = "LOCKED"
+				Error.ERR_TIMEOUT:
+					error_type_name = "TIMEOUT"
+				Error.ERR_CANT_CONNECT:
+					error_type_name = "CANT_CONNECT"
+				Error.ERR_CANT_RESOLVE:
+					error_type_name = "CANT_RESOLVE"
+				Error.ERR_CONNECTION_ERROR:
+					error_type_name = "CONNECTION_ERROR"
+				Error.ERR_CANT_ACQUIRE_RESOURCE:
+					error_type_name = "CANT_ACQUIRE_RESOURCE"
+				Error.ERR_CANT_FORK:
+					error_type_name = "CANT_FORK"
+				Error.ERR_INVALID_DATA:
+					error_type_name = "INVALID_DATA"
+				Error.ERR_INVALID_PARAMETER:
+					error_type_name = "INVALID_PARAMETER"
+				Error.ERR_ALREADY_EXISTS:
+					error_type_name = "ALREADY_EXISTS"
+				Error.ERR_DOES_NOT_EXIST:
+					error_type_name = "DOES_NOT_EXIST"
+				Error.ERR_DATABASE_CANT_READ:
+					error_type_name = "DATABASE_CANT_READ"
+				Error.ERR_DATABASE_CANT_WRITE:
+					error_type_name = "DATABASE_CANT_WRITE"
+				Error.ERR_COMPILATION_FAILED:
+					error_type_name = "COMPILATION_FAILED"
+				Error.ERR_METHOD_NOT_FOUND:
+					error_type_name = "METHOD_NOT_FOUND"
+				Error.ERR_LINK_FAILED:
+					error_type_name = "LINK_FAILED"
+				Error.ERR_SCRIPT_FAILED:
+					error_type_name = "SCRIPT_FAILED"
+				Error.ERR_CYCLIC_LINK:
+					error_type_name = "CYCLIC_LINK"
+				Error.ERR_INVALID_DECLARATION:
+					error_type_name = "INVALID_DECLARATION"
+				Error.ERR_DUPLICATE_SYMBOL:
+					error_type_name = "DUPLICATE_SYMBOL"
+				Error.ERR_PARSE_ERROR:
+					error_type_name = "PARSE_ERROR"
+				Error.ERR_BUSY:
+					error_type_name = "BUSY"
+				Error.ERR_SKIP:
+					error_type_name = "SKIP"
+				Error.ERR_HELP:
+					error_type_name = "HELP"
+				Error.ERR_BUG:
+					error_type_name = "BUG"
+				Error.ERR_PRINTER_ON_FIRE:
+					error_type_name = "PRINTER_ON_FIRE"
 
-			log_manager._add_to_ring_buffer({
-				"message": error_message + backtrace_info,
-				"level": "ERROR",
-				"timestamp": Time.get_ticks_msec(),
-				"source": "engine",
-				"function": function,
-				"file": file,
-				"line": line,
-				"error_code": code,
-				"error_type": error_type_name,
-				"editor_notify": editor_notify,
-				"backtrace_count": script_backtraces.size(),
-			})
+			(
+				log_manager
+				. _add_to_ring_buffer(
+					{
+						"message": error_message + backtrace_info,
+						"level": "ERROR",
+						"timestamp": Time.get_ticks_msec(),
+						"source": "engine",
+						"function": function,
+						"file": file,
+						"line": line,
+						"error_code": code,
+						"error_type": error_type_name,
+						"editor_notify": editor_notify,
+						"backtrace_count": script_backtraces.size(),
+					}
+				)
+			)

@@ -5,16 +5,24 @@ extends RefCounted
 ## This class allows any part of the framework to register tests dynamically.
 
 # Registered test suites
-# Structure: suite_name -> {tests: Dictionary, setup: Callable, teardown: Callable, source: RefCounted}
-# source is optional - if provided, tests can be recreated from method names
+# Structure:
+# - suite_name -> {tests: Dictionary, setup: Callable, teardown: Callable, source: RefCounted}
+# - source is optional: if provided, tests can be recreated from method names
 var _test_suites: Dictionary = {}
 
+
 ## Register a test suite
-func register_suite(suite_name: String, tests: Dictionary, setup: Callable = Callable(), teardown: Callable = Callable(), source: RefCounted = null) -> void:
+func register_suite(
+	suite_name: String,
+	tests: Dictionary,
+	setup: Callable = Callable(),
+	teardown: Callable = Callable(),
+	source: RefCounted = null
+) -> void:
 	if suite_name.is_empty():
 		push_error("TestRegistry: Cannot register suite with empty name")
 		return
-	
+
 	# Convert Callables to method names for storage (Callables don't serialize well)
 	var test_methods: Dictionary = {}
 	for test_name in tests:
@@ -31,7 +39,7 @@ func register_suite(suite_name: String, tests: Dictionary, setup: Callable = Cal
 				test_methods[test_name] = test_value
 		else:
 			test_methods[test_name] = test_value
-	
+
 	_test_suites[suite_name] = {
 		"tests": test_methods,
 		"setup": setup,
@@ -39,9 +47,11 @@ func register_suite(suite_name: String, tests: Dictionary, setup: Callable = Cal
 		"source": source,
 	}
 
+
 ## Unregister a test suite
 func unregister_suite(suite_name: String) -> void:
 	_test_suites.erase(suite_name)
+
 
 ## Get all registered suites
 func get_suites() -> Array[String]:
@@ -53,15 +63,16 @@ func get_suites() -> Array[String]:
 			result.append(key as String)
 	return result
 
+
 ## Get a test suite
 func get_suite(suite_name: String) -> Dictionary:
 	if not _test_suites.has(suite_name):
 		return {}
-	
+
 	var suite = _test_suites[suite_name] as Dictionary
 	var test_methods: Dictionary = suite.get("tests", {})
 	var source: RefCounted = suite.get("source", null)
-	
+
 	# Recreate Callables from method names if source is available
 	var tests: Dictionary = {}
 	if source != null:
@@ -75,33 +86,36 @@ func get_suite(suite_name: String) -> Dictionary:
 	else:
 		# No source - return method names as-is (won't work but preserves structure)
 		tests = test_methods
-	
+
 	return {
 		"tests": tests,
 		"setup": suite.get("setup", Callable()),
 		"teardown": suite.get("teardown", Callable()),
 	}
 
+
 ## Check if suite exists
 func has_suite(suite_name: String) -> bool:
 	return _test_suites.has(suite_name)
+
 
 ## Add tests to an existing suite
 func add_tests_to_suite(suite_name: String, tests: Dictionary) -> void:
 	if not _test_suites.has(suite_name):
 		register_suite(suite_name, tests)
 		return
-	
+
 	var suite := _test_suites[suite_name] as Dictionary
 	var existing_tests := suite["tests"] as Dictionary
 	for test_name in tests:
 		existing_tests[test_name] = tests[test_name]
 
+
 ## Clear all suites
 func clear() -> void:
 	_test_suites.clear()
 
+
 ## Get suite count
 func get_suite_count() -> int:
 	return _test_suites.size()
-

@@ -10,21 +10,22 @@ signal setting_changed(category: String, key: String, value: Variant)
 signal graphics_settings_changed(settings: Dictionary)
 signal audio_settings_changed(settings: Dictionary)
 signal gameplay_settings_changed(settings: Dictionary)
-signal settings_loaded()
-signal settings_saved()
+signal settings_loaded
+signal settings_saved
 
 # Settings file path
 @export_group("Settings Configuration")
 @export var settings_file_path: String = "user://settings.save"
 @export var auto_save: bool = true
 
-
 # Graphics settings
 @export_group("Graphics Settings")
 @export var fullscreen: bool = false:
 	set(value):
 		fullscreen = value
-		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if value else DisplayServer.WINDOW_MODE_WINDOWED)
+		DisplayServer.window_set_mode(
+			DisplayServer.WINDOW_MODE_FULLSCREEN if value else DisplayServer.WINDOW_MODE_WINDOWED
+		)
 		_setting_changed("graphics", "fullscreen", value)
 
 @export var vsync_mode: DisplayServer.VSyncMode = DisplayServer.VSYNC_ENABLED:
@@ -78,12 +79,7 @@ signal settings_saved()
 		_setting_changed("gameplay", "language", value)
 
 # Internal settings storage
-var _settings: Dictionary = {
-	"graphics": {},
-	"audio": {},
-	"gameplay": {},
-	"custom": {}
-}
+var _settings: Dictionary = {"graphics": {}, "audio": {}, "gameplay": {}, "custom": {}}
 
 
 ## Initialize the settings manager
@@ -100,6 +96,7 @@ func _ready() -> void:
 	_on_settings_manager_ready()
 	GGF.log().info("SettingsManager", "SettingsManager ready")
 
+
 ## Initialize settings
 ## Override this method to customize initialization
 func _initialize_settings() -> void:
@@ -110,17 +107,18 @@ func _initialize_settings() -> void:
 		"resolution": resolution,
 		"window_mode": window_mode,
 	}
-	
+
 	_settings["audio"] = {
 		"master_volume": master_volume,
 		"music_volume": music_volume,
 		"sfx_volume": sfx_volume,
 	}
-	
+
 	_settings["gameplay"] = {
 		"difficulty": difficulty,
 		"language": language,
 	}
+
 
 ## Load settings from file
 ## Override this method to customize loading
@@ -157,6 +155,7 @@ func load_settings() -> bool:
 
 	return true
 
+
 ## Save settings to file
 ## Override this method to customize saving
 func save_settings() -> bool:
@@ -179,6 +178,7 @@ func save_settings() -> bool:
 
 	return true
 
+
 ## Apply settings to the game
 ## Override this method to customize application
 func _apply_settings() -> void:
@@ -200,7 +200,7 @@ func _apply_settings() -> void:
 				resolution = res_value
 		if graphics.has("window_mode"):
 			window_mode = graphics["window_mode"]
-	
+
 	# Apply audio settings
 	if _settings.has("audio"):
 		var audio := _settings["audio"] as Dictionary
@@ -210,7 +210,7 @@ func _apply_settings() -> void:
 			music_volume = audio["music_volume"]
 		if audio.has("sfx_volume"):
 			sfx_volume = audio["sfx_volume"]
-	
+
 	# Apply gameplay settings
 	if _settings.has("gameplay"):
 		var gameplay := _settings["gameplay"] as Dictionary
@@ -218,10 +218,11 @@ func _apply_settings() -> void:
 			difficulty = gameplay["difficulty"]
 		if gameplay.has("language"):
 			language = gameplay["language"]
-	
+
 	graphics_settings_changed.emit(_settings.get("graphics", {}))
 	audio_settings_changed.emit(_settings.get("audio", {}))
 	gameplay_settings_changed.emit(_settings.get("gameplay", {}))
+
 
 ## Update settings dictionary from current values
 func _update_settings_dict() -> void:
@@ -231,17 +232,18 @@ func _update_settings_dict() -> void:
 		"resolution": resolution,
 		"window_mode": window_mode,
 	}
-	
+
 	_settings["audio"] = {
 		"master_volume": master_volume,
 		"music_volume": music_volume,
 		"sfx_volume": sfx_volume,
 	}
-	
+
 	_settings["gameplay"] = {
 		"difficulty": difficulty,
 		"language": language,
 	}
+
 
 ## Set a setting value
 ## Override this method to add custom setting logic
@@ -251,7 +253,9 @@ func set_setting(category: String, key: String, value: Variant) -> void:
 
 	_settings[category][key] = value
 
-	GGF.log().debug("SettingsManager", "Setting changed: " + category + "." + key + " = " + str(value))
+	GGF.log().debug(
+		"SettingsManager", "Setting changed: " + category + "." + key + " = " + str(value)
+	)
 
 	# Apply setting if it's a known category
 	match category:
@@ -267,16 +271,18 @@ func set_setting(category: String, key: String, value: Variant) -> void:
 	if auto_save:
 		save_settings()
 
+
 ## Get a setting value
 func get_setting(category: String, key: String, default_value: Variant = null) -> Variant:
 	if not _settings.has(category):
 		return default_value
-	
+
 	var category_settings := _settings[category] as Dictionary
 	if not category_settings.has(key):
 		return default_value
-	
+
 	return category_settings[key]
+
 
 ## Apply a graphics setting
 ## Override this method to customize graphics setting application
@@ -291,6 +297,7 @@ func _apply_graphics_setting(key: String, value: Variant) -> void:
 		"window_mode":
 			window_mode = value
 
+
 ## Apply an audio setting
 ## Override this method to customize audio setting application
 func _apply_audio_setting(key: String, value: Variant) -> void:
@@ -302,13 +309,14 @@ func _apply_audio_setting(key: String, value: Variant) -> void:
 		"sfx_volume":
 			sfx_volume = value
 
+
 ## Apply audio volume to AudioManager (with safety check)
 func _apply_audio_volume_to_manager(setting_key: String, value: float) -> void:
 	# Check if AudioManager exists and is ready
 	var audio_manager := GGF.get_manager(&"AudioManager")
 	if not audio_manager or not audio_manager.is_inside_tree():
 		return
-	
+
 	match setting_key:
 		"master_volume":
 			audio_manager.set_master_volume(value)
@@ -316,6 +324,7 @@ func _apply_audio_volume_to_manager(setting_key: String, value: float) -> void:
 			audio_manager.set_music_volume(value)
 		"sfx_volume":
 			audio_manager.set_sfx_volume(value)
+
 
 ## Apply a gameplay setting
 ## Override this method to customize gameplay setting application
@@ -326,6 +335,7 @@ func _apply_gameplay_setting(key: String, value: Variant) -> void:
 		"language":
 			language = value
 
+
 ## Reset settings to defaults
 func reset_to_defaults() -> void:
 	_initialize_settings()
@@ -333,22 +343,27 @@ func reset_to_defaults() -> void:
 	save_settings()
 	_on_settings_reset()
 
+
 ## Get all settings
 func get_all_settings() -> Dictionary:
 	_update_settings_dict()
 	return _settings.duplicate(true)
 
+
 ## Get graphics settings
 func get_graphics_settings() -> Dictionary:
 	return _settings.get("graphics", {}).duplicate()
+
 
 ## Get audio settings
 func get_audio_settings() -> Dictionary:
 	return _settings.get("audio", {}).duplicate()
 
+
 ## Get gameplay settings
 func get_gameplay_settings() -> Dictionary:
 	return _settings.get("gameplay", {}).duplicate()
+
 
 ## Internal method to emit setting changed signal
 func _setting_changed(category: String, key: String, value: Variant) -> void:
@@ -356,37 +371,48 @@ func _setting_changed(category: String, key: String, value: Variant) -> void:
 	# Emit event for EventManager
 	var event_manager := GGF.events()
 	if event_manager and event_manager.has_method("emit"):
-		event_manager.emit("setting_changed", {
-			"category": category,
-			"key": key,
-			"value": value,
-		})
+		(
+			event_manager
+			. emit(
+				"setting_changed",
+				{
+					"category": category,
+					"key": key,
+					"value": value,
+				}
+			)
+		)
 	_on_setting_changed(category, key, value)
 
+
 ## Virtual methods - Override these in extended classes
+
 
 ## Called when settings manager is ready
 ## Override to add initialization logic
 func _on_settings_manager_ready() -> void:
 	pass
 
+
 ## Called when settings are loaded
 ## Override to handle settings load
 func _on_settings_loaded() -> void:
 	pass
+
 
 ## Called when settings are saved
 ## Override to handle settings save
 func _on_settings_saved() -> void:
 	pass
 
+
 ## Called when a setting changes
 ## Override to handle setting changes
 func _on_setting_changed(_category: String, _key: String, _value: Variant) -> void:
 	pass
 
+
 ## Called when settings are reset
 ## Override to handle settings reset
 func _on_settings_reset() -> void:
 	pass
-

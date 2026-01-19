@@ -9,16 +9,18 @@ extends Node
 const MANAGER_GROUP_PREFIX := &"ggf.manager."
 const MANAGER_NODE_PREFIX := "GGF_"
 
-var _managers: Dictionary = {} # StringName -> Node
-var _bootstrapped := false
-
 const _TYPE_SCRIPTS: Array[String] = [
 	"res://addons/godot_game_framework/core/types/GameStateDefinition.gd",
 	"res://addons/godot_game_framework/core/types/GameStateMachineConfig.gd",
 ]
 
+var _managers: Dictionary = {}  # StringName -> Node
+var _bootstrapped := false
+
+
 func _enter_tree() -> void:
 	_bootstrap()
+
 
 func _bootstrap() -> void:
 	if _bootstrapped:
@@ -32,26 +34,68 @@ func _bootstrap() -> void:
 	# Instantiate managers in a dependency-friendly order.
 	# - Logging first (used by most others)
 	# - Events early (used for cross-manager communication)
-	_ensure_manager(&"LogManager", _load_script("res://addons/godot_game_framework/core/managers/LogManager.gd"))
-	_ensure_manager(&"EventManager", _load_script("res://addons/godot_game_framework/core/managers/EventManager.gd"))
-	_ensure_manager(&"NotificationManager", _load_script("res://addons/godot_game_framework/core/managers/NotificationManager.gd"))
-	_ensure_manager(&"SettingsManager", _load_script("res://addons/godot_game_framework/core/managers/SettingsManager.gd"))
-	_ensure_manager(&"AudioManager", _load_script("res://addons/godot_game_framework/core/managers/AudioManager.gd"))
-	_ensure_manager(&"TimeManager", _load_script("res://addons/godot_game_framework/core/managers/TimeManager.gd"))
-	_ensure_manager(&"ResourceManager", _load_script("res://addons/godot_game_framework/core/managers/ResourceManager.gd"))
-	_ensure_manager(&"PoolManager", _load_script("res://addons/godot_game_framework/core/managers/PoolManager.gd"))
-	_ensure_manager(&"SceneManager", _load_script("res://addons/godot_game_framework/core/managers/SceneManager.gd"))
-	_ensure_manager(&"SaveManager", _load_script("res://addons/godot_game_framework/core/managers/SaveManager.gd"))
-	_ensure_manager(&"NetworkManager", _load_script("res://addons/godot_game_framework/core/managers/NetworkManager.gd"))
-	_ensure_manager(&"InputManager", _load_script("res://addons/godot_game_framework/core/managers/InputManager.gd"))
-	_ensure_manager(&"GameManager", _load_script("res://addons/godot_game_framework/core/managers/GameManager.gd"))
-	_ensure_manager(&"UIManager", _load_script("res://addons/godot_game_framework/core/managers/UIManager.gd"))
+	_ensure_manager(
+		&"LogManager", _load_script("res://addons/godot_game_framework/core/managers/LogManager.gd")
+	)
+	_ensure_manager(
+		&"EventManager",
+		_load_script("res://addons/godot_game_framework/core/managers/EventManager.gd")
+	)
+	_ensure_manager(
+		&"NotificationManager",
+		_load_script("res://addons/godot_game_framework/core/managers/NotificationManager.gd")
+	)
+	_ensure_manager(
+		&"SettingsManager",
+		_load_script("res://addons/godot_game_framework/core/managers/SettingsManager.gd")
+	)
+	_ensure_manager(
+		&"AudioManager",
+		_load_script("res://addons/godot_game_framework/core/managers/AudioManager.gd")
+	)
+	_ensure_manager(
+		&"TimeManager",
+		_load_script("res://addons/godot_game_framework/core/managers/TimeManager.gd")
+	)
+	_ensure_manager(
+		&"ResourceManager",
+		_load_script("res://addons/godot_game_framework/core/managers/ResourceManager.gd")
+	)
+	_ensure_manager(
+		&"PoolManager",
+		_load_script("res://addons/godot_game_framework/core/managers/PoolManager.gd")
+	)
+	_ensure_manager(
+		&"SceneManager",
+		_load_script("res://addons/godot_game_framework/core/managers/SceneManager.gd")
+	)
+	_ensure_manager(
+		&"SaveManager",
+		_load_script("res://addons/godot_game_framework/core/managers/SaveManager.gd")
+	)
+	_ensure_manager(
+		&"NetworkManager",
+		_load_script("res://addons/godot_game_framework/core/managers/NetworkManager.gd")
+	)
+	_ensure_manager(
+		&"InputManager",
+		_load_script("res://addons/godot_game_framework/core/managers/InputManager.gd")
+	)
+	_ensure_manager(
+		&"GameManager",
+		_load_script("res://addons/godot_game_framework/core/managers/GameManager.gd")
+	)
+	_ensure_manager(
+		&"UIManager", _load_script("res://addons/godot_game_framework/core/managers/UIManager.gd")
+	)
+
 
 func _load_script(path: String) -> Script:
 	if not ResourceLoader.exists(path):
 		push_error("GGF: Manager script not found: %s" % path)
 		return null
 	return load(path) as Script
+
 
 func _load_type_scripts() -> void:
 	for p in _TYPE_SCRIPTS:
@@ -60,6 +104,7 @@ func _load_type_scripts() -> void:
 			load(p)
 		else:
 			push_warning("GGF: Type script not found: %s" % p)
+
 
 func _ensure_manager(key: StringName, script: Script) -> Node:
 	if _managers.has(key):
@@ -82,6 +127,7 @@ func _ensure_manager(key: StringName, script: Script) -> Node:
 	_managers[key] = node
 	return node
 
+
 ## Generic manager lookup.
 ## Prefer this over hardcoded `/root/...` paths.
 func get_manager(key: StringName) -> Node:
@@ -99,13 +145,15 @@ func get_manager(key: StringName) -> Node:
 			return n
 	return null
 
+
 ## Convenience accessors (untyped Node returns to avoid requiring `class_name`).
 func log() -> Node:
 	return get_manager(&"LogManager")
 
+
 func events() -> Node:
 	return get_manager(&"EventManager")
 
+
 func notifications() -> Node:
 	return get_manager(&"NotificationManager")
-

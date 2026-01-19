@@ -11,6 +11,7 @@ class_name GameStateDefinition extends Resource
 @export var allowed_transitions: Array[String] = []
 @export var properties: Dictionary = {}
 
+
 func _init(
 	p_name: String = "",
 	p_entry_callback: String = "",
@@ -23,4 +24,3 @@ func _init(
 	exit_callback = p_exit_callback
 	allowed_transitions = p_allowed_transitions
 	properties = p_properties
-

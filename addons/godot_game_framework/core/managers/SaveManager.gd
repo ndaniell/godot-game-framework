@@ -39,12 +39,14 @@ func _ready() -> void:
 	_on_save_manager_ready()
 	GGF.log().info("SaveManager", "SaveManager ready")
 
+
 ## Initialize save directory
 ## Override this method to customize directory setup
 func _initialize_save_directory() -> void:
 	var dir := DirAccess.open("user://")
 	if not dir.dir_exists(save_directory):
 		dir.make_dir_recursive(save_directory)
+
 
 ## Initialize auto-save system
 ## Override this method to customize auto-save setup
@@ -55,6 +57,7 @@ func _initialize_auto_save() -> void:
 		_auto_save_timer.timeout.connect(_on_auto_save_timeout)
 		_auto_save_timer.autostart = true
 		add_child(_auto_save_timer)
+
 
 ## Save game data to a slot
 ## Override this method to add custom save logic
@@ -76,7 +79,9 @@ func save_game(slot: int = 0, metadata: Dictionary = {}) -> bool:
 	var file := FileAccess.open(file_path, FileAccess.WRITE)
 	if file == null:
 		var error := FileAccess.get_open_error()
-		GGF.log().error("SaveManager", "Failed to open save file: " + file_path + " (Error: " + str(error) + ")")
+		GGF.log().error(
+			"SaveManager", "Failed to open save file: " + file_path + " (Error: " + str(error) + ")"
+		)
 		save_failed.emit(slot, "Failed to open file: " + str(error))
 		return false
 
@@ -94,6 +99,7 @@ func save_game(slot: int = 0, metadata: Dictionary = {}) -> bool:
 	_on_game_saved(slot, save_dict)
 
 	return true
+
 
 ## Load game data from a slot
 ## Override this method to add custom load logic
@@ -118,7 +124,9 @@ func load_game(slot: int = 0) -> bool:
 	var file := FileAccess.open(file_path, FileAccess.READ)
 	if file == null:
 		var error := FileAccess.get_open_error()
-		GGF.log().error("SaveManager", "Failed to open save file: " + file_path + " (Error: " + str(error) + ")")
+		GGF.log().error(
+			"SaveManager", "Failed to open save file: " + file_path + " (Error: " + str(error) + ")"
+		)
 		save_failed.emit(slot, "Failed to open file: " + str(error))
 		return false
 
@@ -153,33 +161,35 @@ func load_game(slot: int = 0) -> bool:
 
 	return true
 
+
 ## Delete a save slot
 ## Override this method to add custom delete logic
 func delete_save(slot: int) -> bool:
 	if slot < 0 or slot >= max_save_slots:
 		GGF.log().error("SaveManager", "Invalid save slot: " + str(slot))
 		return false
-	
+
 	var file_path := _get_save_file_path(slot)
-	
+
 	if not FileAccess.file_exists(file_path):
 		GGF.log().warn("SaveManager", "Save file does not exist: " + file_path)
 		return false
-	
+
 	var dir := DirAccess.open("user://")
 	if dir.remove(file_path) != OK:
 		GGF.log().error("SaveManager", "Failed to delete save file: " + file_path)
 		return false
-	
+
 	# Clear current slot if it was deleted
 	if current_save_slot == slot:
 		current_save_slot = -1
 		save_data = {}
-	
+
 	save_deleted.emit(slot)
 	_on_save_deleted(slot)
-	
+
 	return true
+
 
 ## Check if a save slot exists
 func save_exists(slot: int) -> bool:
@@ -187,25 +197,27 @@ func save_exists(slot: int) -> bool:
 		return false
 	return FileAccess.file_exists(_get_save_file_path(slot))
 
+
 ## Get save metadata for a slot
 func get_save_metadata(slot: int) -> Dictionary:
 	if not save_exists(slot):
 		return {}
-	
+
 	var file_path := _get_save_file_path(slot)
 	var file := FileAccess.open(file_path, FileAccess.READ)
 	if file == null:
 		return {}
-	
+
 	var json_string := file.get_as_text()
 	file.close()
-	
+
 	var json := JSON.new()
 	if json.parse(json_string) != OK:
 		return {}
-	
+
 	var data := json.data as Dictionary
 	return data.get("metadata", {})
+
 
 ## Get all available save slots
 func get_available_saves() -> Array[int]:
@@ -215,19 +227,23 @@ func get_available_saves() -> Array[int]:
 			saves.append(i)
 	return saves
 
+
 ## Quick save (saves to current slot or slot 0)
 func quick_save() -> bool:
 	var slot := current_save_slot if current_save_slot >= 0 else 0
 	return save_game(slot)
+
 
 ## Quick load (loads from current slot or slot 0)
 func quick_load() -> bool:
 	var slot := current_save_slot if current_save_slot >= 0 else 0
 	return load_game(slot)
 
+
 ## Get file path for a save slot
 func _get_save_file_path(slot: int) -> String:
 	return save_directory + "/" + save_file_prefix + str(slot) + save_file_extension
+
 
 ## Prepare save data dictionary
 ## Override this method to customize what data is saved
@@ -241,6 +257,7 @@ func _prepare_save_data(slot: int, metadata: Dictionary) -> Dictionary:
 	}
 	return save_dict
 
+
 ## Collect game data to save
 ## Override this method to collect custom game data
 func _collect_game_data() -> Dictionary:
@@ -251,15 +268,18 @@ func _collect_game_data() -> Dictionary:
 	}
 	return game_data
 
+
 ## Collect player data
 ## Override this method to collect player-specific data
 func _collect_player_data() -> Dictionary:
 	return {}
 
+
 ## Collect world data
 ## Override this method to collect world-specific data
 func _collect_world_data() -> Dictionary:
 	return {}
+
 
 ## Apply loaded save data
 ## Override this method to customize how data is applied
@@ -269,48 +289,57 @@ func _apply_save_data(data: Dictionary) -> void:
 	_apply_player_data(game_data.get("player_data", {}) as Dictionary)
 	_apply_world_data(game_data.get("world_data", {}) as Dictionary)
 
+
 ## Apply player data
 ## Override this method to apply player-specific data
 func _apply_player_data(_player_data: Dictionary) -> void:
 	pass
+
 
 ## Apply world data
 ## Override this method to apply world-specific data
 func _apply_world_data(_world_data: Dictionary) -> void:
 	pass
 
+
 ## Called when auto-save timer times out
 func _on_auto_save_timeout() -> void:
 	if current_save_slot >= 0:
 		quick_save()
 
+
 ## Virtual methods - Override these in extended classes
+
 
 ## Called when save manager is ready
 ## Override to add initialization logic
 func _on_save_manager_ready() -> void:
 	pass
 
+
 ## Called when game is saved
 ## Override to add post-save logic
 func _on_game_saved(_slot: int, _data: Dictionary) -> void:
 	pass
+
 
 ## Called when game is loaded
 ## Override to add post-load logic
 func _on_game_loaded(_slot: int, _data: Dictionary) -> void:
 	pass
 
+
 ## Called when save is deleted
 ## Override to add post-delete logic
 func _on_save_deleted(_slot: int) -> void:
 	pass
 
+
 ## Get current save data
 func get_current_save_data() -> Dictionary:
 	return save_data.duplicate(true)
 
+
 ## Set save data (for manual data manipulation)
 func set_save_data(data: Dictionary) -> void:
 	save_data = data
-

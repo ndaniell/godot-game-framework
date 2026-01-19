@@ -21,6 +21,10 @@ var test_framework: Node
 var test_registry: RefCounted
 var _exit_code: int = 0
 
+# Store reference to manager_tests for cleanup
+var _manager_tests: RefCounted = null
+
+
 func _ready() -> void:
 	# Wait for GGF to bootstrap managers
 	var tree = get_tree()
@@ -62,8 +66,6 @@ func _ready() -> void:
 	if auto_run_on_ready:
 		run_all_tests()
 
-# Store reference to manager_tests for cleanup
-var _manager_tests: RefCounted = null
 
 ## Register default test suites
 ## Override this to add your own test discovery
@@ -83,10 +85,12 @@ func _register_default_test_suites() -> void:
 		else:
 			_register_manager_tests()
 
+
 ## Register manager tests (fallback method)
 func _register_manager_tests() -> void:
 	# This will be populated by ManagerTests if it exists
 	pass
+
 
 ## Run all registered tests
 func run_all_tests() -> Dictionary:
@@ -106,9 +110,10 @@ func run_all_tests() -> Dictionary:
 	call_deferred("_quit_tree")
 	return results
 
+
 func _quit_tree() -> void:
 	_cleanup_resources()
-	
+
 	var tree = get_tree()
 	if tree == null:
 		return
@@ -119,23 +124,24 @@ func _quit_tree() -> void:
 	for tween in tree.get_processed_tweens():
 		if tween != null and tween.is_valid():
 			tween.kill()
-	
+
 	# Give queued frees/timers a chance to flush before exiting (helps avoid leak warnings).
 	for _i in range(5):
 		await tree.process_frame
 	tree.quit(_exit_code)
+
 
 func _cleanup_resources() -> void:
 	if _manager_tests != null:
 		if _manager_tests.has_method("set"):
 			_manager_tests.set("test_framework", null)
 		_manager_tests = null
-	
+
 	if test_registry != null:
 		if test_registry.has_method("clear"):
 			test_registry.clear()
 		test_registry = null
-	
+
 	if test_framework != null and is_instance_valid(test_framework):
 		if test_framework.has_method("_cleanup"):
 			test_framework._cleanup()
@@ -144,24 +150,35 @@ func _cleanup_resources() -> void:
 		test_framework.free()
 		test_framework = null
 
+
 ## Register a test suite
-func register_suite(suite_name: String, tests: Dictionary, setup: Callable = Callable(), teardown: Callable = Callable(), source: RefCounted = null) -> void:
+func register_suite(
+	suite_name: String,
+	tests: Dictionary,
+	setup: Callable = Callable(),
+	teardown: Callable = Callable(),
+	source: RefCounted = null
+) -> void:
 	test_registry.register_suite(suite_name, tests, setup, teardown, source)
+
 
 ## Register a test suite object
 func register_suite_object(test_suite: RefCounted) -> void:
 	if test_suite == null:
 		push_error("TestRunner: Cannot register null test suite")
 		return
-	
+
 	if test_suite.has_method("get_suite_name") and test_suite.has_method("get_tests"):
 		test_suite.set("test_framework", test_framework)
 		var tests: Dictionary = test_suite.get_tests()
 		var setup := Callable(test_suite, "setup") if test_suite.has_method("setup") else Callable()
-		var teardown := Callable(test_suite, "teardown") if test_suite.has_method("teardown") else Callable()
+		var teardown := (
+			Callable(test_suite, "teardown") if test_suite.has_method("teardown") else Callable()
+		)
 		test_registry.register_suite(test_suite.get_suite_name(), tests, setup, teardown)
 	else:
 		push_error("TestRunner: Test suite must have get_suite_name() and get_tests() methods")
+
 
 ## Run a specific test suite
 func run_suite(suite_name: String) -> Dictionary:
@@ -169,18 +186,19 @@ func run_suite(suite_name: String) -> Dictionary:
 	if suite.is_empty():
 		push_error("TestRunner: Suite not found: " + suite_name)
 		return {}
-	
+
 	var tests: Dictionary = suite.get("tests", {})
 	var setup: Callable = suite.get("setup", Callable())
 	var teardown: Callable = suite.get("teardown", Callable())
-	
+
 	return test_framework.run_test_suite(suite_name, tests, setup, teardown)
+
 
 ## Get test registry (for external registration)
 func get_registry() -> RefCounted:
 	return test_registry
 
+
 ## Get test framework (for external use)
 func get_framework() -> Node:
 	return test_framework
-
