@@ -183,7 +183,7 @@ This is a framework designed to be extended. Feel free to:
 
 ## License
 
-This framework is provided as-is for use in your projects.
+MIT. See [`LICENSE`](LICENSE).
 
 ## Testing
 

@@ -32,6 +32,11 @@ enum LogLevel {
 @export var ring_buffer_size: int = 1000
 @export var enable_ring_buffer: bool = true
 
+# Output routing
+# When true, WARN messages use Godot's `push_warning()` (shows up as engine WARNING lines).
+# Disable in automated tests/CI if you want a clean, warning-free console output.
+@export var emit_engine_warnings: bool = true
+
 # File logging configuration
 @export var enable_file_logging: bool = true
 @export var log_directory: String = "user://logs"
@@ -269,7 +274,10 @@ func _log(level: LogLevel, category: String, message: String) -> void:
 		LogLevel.INFO:
 			print(formatted_message)
 		LogLevel.WARN:
-			push_warning(formatted_message)
+			if emit_engine_warnings:
+				push_warning(formatted_message)
+			else:
+				print(formatted_message)
 		LogLevel.ERROR:
 			push_error(formatted_message)
 

@@ -29,6 +29,13 @@ func _ready() -> void:
 		# Only wait one frame in headless mode
 		if not DisplayServer.get_name() == "headless":
 			await tree.process_frame
+
+	# Avoid engine WARNING output during tests (AssetLib recommendation: no warnings).
+	var ggf := get_node_or_null("/root/GGF")
+	if ggf != null and ggf.has_method("get_manager"):
+		var log_manager: Node = ggf.get_manager(&"LogManager") as Node
+		if log_manager != null and log_manager.has_method("set"):
+			log_manager.set("emit_engine_warnings", false)
 	
 	# Initialize test framework
 	var framework_script = load("res://addons/godot_game_framework/tests/TestFramework.gd")
