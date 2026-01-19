@@ -1,0 +1,41 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build addon zip
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          TAG="${GITHUB_REF_NAME}"
+          ZIP_NAME="godot_game_framework-${TAG}.zip"
+
+          rm -rf dist
+          mkdir -p dist/addons
+          cp -a addons/godot_game_framework dist/addons/
+
+          (cd dist && zip -r "../${ZIP_NAME}" addons)
+
+          echo "ZIP_NAME=${ZIP_NAME}" >> "${GITHUB_ENV}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.ZIP_NAME }}
+          fail_on_unmatched_files: true
+          generate_release_notes: true

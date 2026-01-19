@@ -42,6 +42,7 @@ show_help() {
     echo "    ${YELLOW}lint${NC}              Lint addon GDScript (gdlint)"
     echo "    ${YELLOW}format [--check]${NC}  Format addon GDScript (gdformat)"
     echo "    ${YELLOW}export [options]${NC}  Export the project using presets in export_presets.cfg"
+    echo "    ${YELLOW}release <kind>${NC}    Create a release: bump version, commit, tag, and push (kind: patch|minor|major)"
     echo "    ${YELLOW}help${NC}              Show this help message"
     echo
     echo "${GREEN}Lint/format options:${NC}"
@@ -63,6 +64,7 @@ show_help() {
     echo "    ggf export           Export all presets defined in export_presets.cfg"
     echo "    ggf export --list    List export presets"
     echo "    ggf export --preset \"Linux\"     Export only the Linux preset"
+    echo "    ggf release patch    Bump 0.1.0 -> 0.1.1, commit, tag v0.1.1, push main + tag"
     echo "    ggf help             Show this help message"
     echo
     echo "${GREEN}For more information, visit:${NC} https://godotengine.org/"
@@ -80,6 +82,207 @@ require_command() {
     echo "${YELLOW}Install ${human_name} locally to use this command.${NC}"
     echo "${YELLOW}Tip: see requirements-dev.txt and the CI workflow for the exact tools used.${NC}"
     return 1
+}
+
+require_git_repo() {
+    require_command "git" "git" || exit 1
+    if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+        echo "${RED}Error: Not inside a git repository.${NC}"
+        exit 1
+    fi
+}
+
+require_clean_worktree() {
+    local status
+    status="$(git status --porcelain)"
+    if [ -n "$status" ]; then
+        echo "${RED}Error: Working tree is not clean.${NC}"
+        echo "${YELLOW}Commit or stash changes before releasing.${NC}"
+        exit 1
+    fi
+}
+
+require_on_main_branch() {
+    local branch
+    branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+    if [ "$branch" != "main" ]; then
+        echo "${RED}Error: Release must be created from branch 'main' (current: '$branch').${NC}"
+        exit 1
+    fi
+}
+
+require_origin_remote() {
+    if ! git remote get-url origin > /dev/null 2>&1; then
+        echo "${RED}Error: 'origin' remote not found.${NC}"
+        exit 1
+    fi
+}
+
+require_not_behind_origin_main() {
+    # Make sure origin/main exists locally
+    if ! git show-ref --verify --quiet refs/remotes/origin/main; then
+        echo "${BLUE}Fetching origin/main and tags...${NC}"
+        git fetch --tags origin main
+    fi
+
+    local counts behind ahead
+    counts="$(git rev-list --left-right --count origin/main...HEAD 2>/dev/null || true)"
+    if [ -z "$counts" ]; then
+        echo "${RED}Error: Could not compare HEAD to origin/main.${NC}"
+        exit 1
+    fi
+    behind="$(echo "$counts" | awk '{print $1}')"
+    ahead="$(echo "$counts" | awk '{print $2}')"
+
+    if [ "${behind:-0}" -ne 0 ]; then
+        if [ "${ahead:-0}" -ne 0 ]; then
+            echo "${RED}Error: Local main has diverged from origin/main (behind=$behind, ahead=$ahead).${NC}"
+        else
+            echo "${RED}Error: Local main is behind origin/main by $behind commit(s).${NC}"
+        fi
+        echo "${YELLOW}Pull/rebase main before running release.${NC}"
+        exit 1
+    fi
+}
+
+read_plugin_version() {
+    local plugin_cfg="addons/godot_game_framework/plugin.cfg"
+    if [ ! -f "$plugin_cfg" ]; then
+        echo ""
+        return 1
+    fi
+    # Extract version="X.Y.Z"
+    local v
+    v="$(sed -n -E 's/^version="([^"]+)".*$/\1/p' "$plugin_cfg" | head -n 1)"
+    if [ -z "$v" ]; then
+        echo ""
+        return 1
+    fi
+    echo "$v"
+}
+
+is_semver() {
+    local v="$1"
+    [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+}
+
+bump_semver() {
+    local v="$1"
+    local kind="$2"
+
+    local major minor patch
+    IFS='.' read -r major minor patch <<< "$v"
+
+    case "$kind" in
+        patch)
+            patch=$((patch + 1))
+            ;;
+        minor)
+            minor=$((minor + 1))
+            patch=0
+            ;;
+        major)
+            major=$((major + 1))
+            minor=0
+            patch=0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+
+    echo "${major}.${minor}.${patch}"
+}
+
+write_plugin_version() {
+    local new_version="$1"
+    local plugin_cfg="addons/godot_game_framework/plugin.cfg"
+
+    if [ ! -f "$plugin_cfg" ]; then
+        echo "${RED}Error: Could not find $plugin_cfg${NC}"
+        exit 1
+    fi
+
+    # Replace only the version line.
+    # Keep it simple/strict: require the line to start with version="
+    if ! grep -qE '^version="' "$plugin_cfg"; then
+        echo "${RED}Error: Could not find version line in $plugin_cfg${NC}"
+        exit 1
+    fi
+
+    sed -i -E 's/^version="[^"]*"/version="'"$new_version"'"/' "$plugin_cfg"
+}
+
+cmd_release() {
+    set -euo pipefail
+
+    local kind="${1:-}"
+    if [ -z "$kind" ]; then
+        echo "${RED}Error: Missing release kind.${NC}"
+        echo "${YELLOW}Usage: ggf release patch|minor|major${NC}"
+        exit 1
+    fi
+
+    case "$kind" in
+        patch|minor|major) ;;
+        *)
+            echo "${RED}Error: Unknown release kind '$kind'.${NC}"
+            echo "${YELLOW}Usage: ggf release patch|minor|major${NC}"
+            exit 1
+            ;;
+    esac
+
+    echo "${BLUE}Creating release (${BOLD}${kind}${NC}${BLUE})...${NC}"
+
+    require_git_repo
+    require_on_main_branch
+    require_clean_worktree
+    require_origin_remote
+
+    echo "${BLUE}Fetching origin/main and tags...${NC}"
+    git fetch --tags origin main
+    require_not_behind_origin_main
+
+    local current_version
+    current_version="$(read_plugin_version)" || true
+    if [ -z "$current_version" ]; then
+        echo "${RED}Error: Could not read current version from addons/godot_game_framework/plugin.cfg${NC}"
+        exit 1
+    fi
+    if ! is_semver "$current_version"; then
+        echo "${RED}Error: Current version is not semver (X.Y.Z): '$current_version'${NC}"
+        exit 1
+    fi
+
+    local new_version
+    new_version="$(bump_semver "$current_version" "$kind")" || true
+    if [ -z "$new_version" ]; then
+        echo "${RED}Error: Failed to bump version '${current_version}' with kind '${kind}'.${NC}"
+        exit 1
+    fi
+
+    local tag="v${new_version}"
+    if git rev-parse -q --verify "refs/tags/${tag}" > /dev/null 2>&1; then
+        echo "${RED}Error: Tag '${tag}' already exists.${NC}"
+        exit 1
+    fi
+
+    echo "${BLUE}Bumping version: ${YELLOW}${current_version}${NC} -> ${YELLOW}${new_version}${NC}"
+    write_plugin_version "$new_version"
+
+    echo "${BLUE}Committing version bump...${NC}"
+    git add addons/godot_game_framework/plugin.cfg
+    git commit -m "chore(release): ${tag}"
+
+    echo "${BLUE}Tagging release...${NC}"
+    git tag -a "${tag}" -m "${tag}"
+
+    echo "${BLUE}Pushing main and tag to origin...${NC}"
+    git push origin main
+    git push origin "${tag}"
+
+    echo "${GREEN}✓ Release created: ${BOLD}${tag}${NC}${GREEN}${NC}"
+    echo "${GREEN}  GitHub Actions should create a release when the tag is pushed.${NC}"
 }
 
 # Lint addon GDScript
@@ -545,6 +748,9 @@ main() {
             ;;
         export)
             cmd_export "$@"
+            ;;
+        release)
+            cmd_release "$@"
             ;;
         help|--help|-h)
             show_help
