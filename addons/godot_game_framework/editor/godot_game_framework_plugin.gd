@@ -9,9 +9,13 @@ func _enter_tree() -> void:
 	# The framework must be loaded via a project autoload named `GGF`.
 	if not _has_autoload(AUTOLOAD_NAME):
 		push_error(
-			"Godot Game Framework: missing required autoload '%s'. "
-			+ "Add an autoload named '%s' pointing to your bootstrapper (e.g. `res://src/ExampleGGF.gd`)."
-			% [AUTOLOAD_NAME, AUTOLOAD_NAME]
+			(
+				"Godot Game Framework: missing required autoload '%s'. "
+				+ (
+					"Add an autoload named '%s' pointing to your bootstrapper (e.g. `res://src/ExampleGGF.gd`)."
+					% [AUTOLOAD_NAME, AUTOLOAD_NAME]
+				)
+			)
 		)
 		return
 
