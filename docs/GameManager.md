@@ -67,9 +67,9 @@ Change to a new game state.
 
 **Example:**
 ```gdscript
-GameManager.change_state("PLAYING")
-GameManager.change_state("PAUSED")
-GameManager.change_state("GAME_OVER")
+GGF.get_manager(&"GameManager").change_state("PLAYING")
+GGF.get_manager(&"GameManager").change_state("PAUSED")
+GGF.get_manager(&"GameManager").change_state("GAME_OVER")
 ```
 
 #### `get_state_name() -> String`
@@ -82,7 +82,7 @@ Check if the game is in a specific state.
 
 **Example:**
 ```gdscript
-if GameManager.is_in_state("PLAYING"):
+if GGF.get_manager(&"GameManager").is_in_state("PLAYING"):
     # Game is running
 ```
 
@@ -124,7 +124,7 @@ Change to a new scene with optional transition effect.
 
 **Example:**
 ```gdscript
-GameManager.change_scene("res://scenes/level2.tscn", "fade")
+GGF.get_manager(&"GameManager").change_scene("res://scenes/level2.tscn", "fade")
 ```
 
 #### `reload_current_scene() -> void`
@@ -159,7 +159,7 @@ Called when game state changes.
 
 **Example:**
 ```gdscript
-extends GameManager
+extends GGF_GameManager
 
 func _on_state_changed(old_state: String, new_state: String) -> void:
     print("State changed: %s -> %s" % [old_state, new_state])
@@ -286,29 +286,29 @@ exit_callback = "_on_paused_exited"
 ```gdscript
 func _ready() -> void:
     # Start in menu state
-    GameManager.change_state("MENU")
+    GGF.get_manager(&"GameManager").change_state("MENU")
 
 func start_game() -> void:
-    GameManager.change_state("PLAYING")
-    GameManager.change_scene("res://scenes/level1.tscn", "fade")
+    GGF.get_manager(&"GameManager").change_state("PLAYING")
+    GGF.get_manager(&"GameManager").change_scene("res://scenes/level1.tscn", "fade")
 
 func _input(event: InputEvent) -> void:
     if event.is_action_pressed("ui_cancel"):
-        GameManager.toggle_pause()
+        GGF.get_manager(&"GameManager").toggle_pause()
 ```
 
 ### Custom Game Manager
 
 ```gdscript
-extends GameManager
+extends GGF_GameManager
 
 var lives: int = 3
 var score: int = 0
 
 func _on_game_ready() -> void:
     # Connect to events
-    EventManager.subscribe("player_died", _on_player_died)
-    EventManager.subscribe("level_complete", _on_level_complete)
+    GGF.events().subscribe("player_died", _on_player_died)
+    GGF.events().subscribe("level_complete", _on_level_complete)
 
 func _on_player_died(data: Dictionary) -> void:
     lives -= 1
@@ -323,33 +323,33 @@ func _on_level_complete(data: Dictionary) -> void:
 
 func _on_game_over() -> void:
     # Save high score
-    SaveManager.save_game(0, {"score": score, "final_score": true})
+    GGF.get_manager(&"SaveManager").save_game(0, {"score": score, "final_score": true})
     # Show game over screen
-    UIManager.open_menu("game_over_menu")
+    GGF.get_manager(&"UIManager").open_menu("game_over_menu")
 
 func _on_victory() -> void:
     # Show victory screen
-    UIManager.open_menu("victory_menu")
+    GGF.get_manager(&"UIManager").open_menu("victory_menu")
 ```
 
 ### State-Based Behavior
 
 ```gdscript
-extends GameManager
+extends GGF_GameManager
 
 func _on_state_changed(old_state: String, new_state: String) -> void:
     # Update UI based on state
     match new_state:
         "MENU":
-            UIManager.show_ui_element("main_menu")
-            UIManager.hide_ui_element("hud")
+            GGF.get_manager(&"UIManager").show_ui_element("main_menu")
+            GGF.get_manager(&"UIManager").hide_ui_element("hud")
         "PLAYING":
-            UIManager.hide_ui_element("main_menu")
-            UIManager.show_ui_element("hud")
+            GGF.get_manager(&"UIManager").hide_ui_element("main_menu")
+            GGF.get_manager(&"UIManager").show_ui_element("hud")
         "PAUSED":
-            UIManager.show_ui_element("pause_menu")
+            GGF.get_manager(&"UIManager").show_ui_element("pause_menu")
         "LOADING":
-            UIManager.show_ui_element("loading_screen")
+            GGF.get_manager(&"UIManager").show_ui_element("loading_screen")
 
 func _on_pause_changed(is_paused: bool) -> void:
     if is_paused:
@@ -363,7 +363,7 @@ func _on_pause_changed(is_paused: bool) -> void:
 ### Level Progression System
 
 ```gdscript
-extends GameManager
+extends GGF_GameManager
 
 var current_level: int = 1
 var max_level: int = 10
@@ -386,7 +386,7 @@ func _on_scene_changed(scene_path: String) -> void:
 ### Save/Load Integration
 
 ```gdscript
-extends GameManager
+extends GGF_GameManager
 
 func save_current_game() -> void:
     var save_data = {
@@ -394,11 +394,12 @@ func save_current_game() -> void:
         "scene": current_scene_path,
         "timestamp": Time.get_unix_time_from_system()
     }
-    SaveManager.save_game(0, save_data)
+    GGF.get_manager(&"SaveManager").save_game(0, save_data)
 
 func load_saved_game() -> void:
-    if SaveManager.load_game(0):
-        var data = SaveManager.get_current_save_data()
+    var save_manager := GGF.get_manager(&"SaveManager")
+    if save_manager.load_game(0):
+        var data = save_manager.get_current_save_data()
         var game_data = data.get("game_data", {})
         
         # Restore scene
@@ -431,12 +432,12 @@ GAME_OVER -> [MENU, LOADING]
 func _on_paused_entered() -> void:
     is_paused = true
     # Open pause menu
-    UIManager.open_menu("pause_menu")
+    GGF.get_manager(&"UIManager").open_menu("pause_menu")
 
 func _on_paused_exited() -> void:
     is_paused = false
     # Close pause menu
-    UIManager.close_menu("pause_menu")
+    GGF.get_manager(&"UIManager").close_menu("pause_menu")
 ```
 
 ### 3. Coordinate with Other Managers
@@ -483,8 +484,8 @@ Pause state automatically affects time scale:
 
 GameManager emits events that other systems can listen to:
 ```gdscript
-EventManager.subscribe("game_state_changed", _on_state_change)
-EventManager.subscribe("game_paused", _on_pause)
+GGF.events().subscribe("game_state_changed", _on_state_change)
+GGF.events().subscribe("game_paused", _on_pause)
 ```
 
 ## See Also

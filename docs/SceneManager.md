@@ -107,13 +107,13 @@ Override to customize slide transition.
 
 ```gdscript
 # Simple scene change
-SceneManager.change_scene("res://scenes/level2.tscn")
+GGF.get_manager(&"SceneManager").change_scene("res://scenes/level2.tscn")
 
 # Scene change with fade transition
-SceneManager.change_scene("res://scenes/menu.tscn", "fade")
+GGF.get_manager(&"SceneManager").change_scene("res://scenes/menu.tscn", "fade")
 
 # Reload current scene
-SceneManager.reload_current_scene()
+GGF.get_manager(&"SceneManager").reload_current_scene()
 ```
 
 ### Preloading for Faster Loads
@@ -121,18 +121,19 @@ SceneManager.reload_current_scene()
 ```gdscript
 # Preload next level during gameplay
 func _ready() -> void:
-    SceneManager.preload_scene("res://scenes/level2.tscn")
-    SceneManager.preload_scene("res://scenes/level3.tscn")
+    var scene_manager := GGF.get_manager(&"SceneManager")
+    scene_manager.preload_scene("res://scenes/level2.tscn")
+    scene_manager.preload_scene("res://scenes/level3.tscn")
 
 # Later, when changing scenes
 func advance_to_next_level() -> void:
-    SceneManager.change_scene("res://scenes/level2.tscn", "fade")
+    GGF.get_manager(&"SceneManager").change_scene("res://scenes/level2.tscn", "fade")
 ```
 
 ### Custom Transitions
 
 ```gdscript
-extends SceneManager
+extends GGF_SceneManager
 
 func _perform_transition(from_scene: String, to_scene: String, transition_type: String) -> void:
     match transition_type:
@@ -180,27 +181,28 @@ var current_level_index: int = 0
 
 func _ready() -> void:
     # Preload first two levels
-    SceneManager.preload_scene(levels[0])
+    var scene_manager := GGF.get_manager(&"SceneManager")
+    scene_manager.preload_scene(levels[0])
     if levels.size() > 1:
-        SceneManager.preload_scene(levels[1])
+        scene_manager.preload_scene(levels[1])
 
 func load_next_level() -> void:
     if current_level_index >= levels.size() - 1:
         # Game complete
-        SceneManager.change_scene("res://scenes/victory.tscn", "fade")
+        scene_manager.change_scene("res://scenes/victory.tscn", "fade")
         return
     
     current_level_index += 1
     
     # Preload next level if available
     if current_level_index + 1 < levels.size():
-        SceneManager.preload_scene(levels[current_level_index + 1])
+        scene_manager.preload_scene(levels[current_level_index + 1])
     
     # Load current level
-    SceneManager.change_scene(levels[current_level_index], "fade")
+    scene_manager.change_scene(levels[current_level_index], "fade")
 
 func restart_level() -> void:
-    SceneManager.change_scene(levels[current_level_index], "fade")
+    scene_manager.change_scene(levels[current_level_index], "fade")
 ```
 
 ## Best Practices

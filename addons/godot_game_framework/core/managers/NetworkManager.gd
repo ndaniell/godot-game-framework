@@ -1,3 +1,4 @@
+class_name GGF_NetworkManager
 extends Node
 
 ## NetworkManager - Generic ENet networking helper for the Godot Game Framework

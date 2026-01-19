@@ -126,39 +126,39 @@ LogManager supports running multiple game instances simultaneously with distinct
 
 ```gdscript
 func _ready() -> void:
-    LogManager.info("MyScript", "Script initialized")
-    LogManager.debug("MyScript", "Debug information: " + str(some_value))
-    LogManager.warn("MyScript", "Potential issue detected")
-    LogManager.error("MyScript", "Critical error occurred")
+    GGF.log().info("MyScript", "Script initialized")
+    GGF.log().debug("MyScript", "Debug information: " + str(some_value))
+    GGF.log().warn("MyScript", "Potential issue detected")
+    GGF.log().error("MyScript", "Critical error occurred")
 ```
 
 ### Level Filtering
 
 ```gdscript
 # Set to DEBUG level to see debug messages
-LogManager.set_level_by_name("DEBUG")
+GGF.log().set_level_by_name("DEBUG")
 
 # Only INFO, WARN, and ERROR will show
-LogManager.set_level_by_name("INFO")
+GGF.log().set_level_by_name("INFO")
 ```
 
 ### Ring Buffer Access
 
 ```gdscript
 # Get recent logs for debugging UI
-var recent_logs = LogManager.get_ring_buffer()
+var recent_logs = GGF.log().get_ring_buffer()
 for entry in recent_logs:
     debug_label.text += entry.message + "\n"
 
 # Clear buffer when no longer needed
-LogManager.clear_ring_buffer()
+GGF.log().clear_ring_buffer()
 ```
 
 ### Custom Log Analysis
 
 ```gdscript
 func get_error_count() -> int:
-    var logs = LogManager.get_ring_buffer()
+    var logs = GGF.log().get_ring_buffer()
     var error_count = 0
     for entry in logs:
         if entry.level == "ERROR":
@@ -187,13 +187,13 @@ LogManager integrates with all framework managers:
 
 ```gdscript
 # GameManager state changes
-LogManager.info("GameManager", "State changed from MENU to PLAYING")
+GGF.log().info("GameManager", "State changed from MENU to PLAYING")
 
 # NetworkManager connections
-LogManager.info("NetworkManager", "Peer 2 connected")
+GGF.log().info("NetworkManager", "Peer 2 connected")
 
 # ResourceManager loading
-LogManager.debug("ResourceManager", "Loaded texture: player_sprite.png")
+GGF.log().debug("ResourceManager", "Loaded texture: player_sprite.png")
 ```
 
 ### Custom Categories
@@ -201,9 +201,9 @@ LogManager.debug("ResourceManager", "Loaded texture: player_sprite.png")
 Use descriptive categories for better log filtering:
 
 ```gdscript
-LogManager.info("PlayerMovement", "Player jumped")
-LogManager.debug("InventorySystem", "Item added: " + item_name)
-LogManager.warn("SaveSystem", "Failed to save game: " + error_message)
+GGF.log().info("PlayerMovement", "Player jumped")
+GGF.log().debug("InventorySystem", "Item added: " + item_name)
+GGF.log().warn("SaveSystem", "Failed to save game: " + error_message)
 ```
 
 ## Best Practices
@@ -228,9 +228,9 @@ Configure LogManager through the Godot editor:
 
 ```gdscript
 # Adjust settings at runtime
-LogManager.current_level = LogManager.LogLevel.DEBUG
-LogManager.ring_buffer_size = 500
-LogManager.enable_file_logging = false  # Disable file logging if needed
+GGF.log().current_level = GGF.log().LogLevel.DEBUG
+GGF.log().ring_buffer_size = 500
+GGF.log().enable_file_logging = false  # Disable file logging if needed
 ```
 
 ## Troubleshooting
@@ -239,7 +239,7 @@ LogManager.enable_file_logging = false  # Disable file logging if needed
 
 - Check `current_level` is set appropriately
 - Verify category names match expectations
-- Ensure LogManager autoload is enabled
+- Ensure the `GGF` autoload is enabled (it bootstraps `LogManager`)
 
 ### File Logging Issues
 

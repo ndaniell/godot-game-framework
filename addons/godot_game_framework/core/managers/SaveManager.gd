@@ -1,3 +1,4 @@
+class_name GGF_SaveManager
 extends Node
 
 ## SaveManager - Extensible save/load system for the Godot Game Framework

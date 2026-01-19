@@ -72,7 +72,7 @@ Plays a music track with optional fade-in effect.
 
 **Example:**
 ```gdscript
-AudioManager.play_music(my_music_stream, true, 2.0)
+GGF.get_manager(&"AudioManager").play_music(my_music_stream, true, 2.0)
 ```
 
 #### `stop_music(fade_out: bool = false, fade_duration: float = 1.0) -> void`
@@ -85,7 +85,7 @@ Stops the current music with optional fade-out effect.
 
 **Example:**
 ```gdscript
-AudioManager.stop_music(true, 1.5)
+GGF.get_manager(&"AudioManager").stop_music(true, 1.5)
 ```
 
 #### `get_current_music() -> AudioStream`
@@ -110,7 +110,7 @@ Plays a sound effect at the specified volume scale.
 
 **Example:**
 ```gdscript
-AudioManager.play_sfx(explosion_sound, 0.8)
+GGF.get_manager(&"AudioManager").play_sfx(explosion_sound, 0.8)
 ```
 
 ### Volume Control
@@ -137,7 +137,7 @@ Called when music starts playing. Override to add custom logic when music begins
 
 **Example:**
 ```gdscript
-extends AudioManager
+extends GGF_AudioManager
 
 func _on_music_started(stream: AudioStream) -> void:
     print("Now playing: ", stream.resource_path)
@@ -166,10 +166,10 @@ Called when a sound effect is played. Override to track or modify sound effects.
 ```gdscript
 # Load and play music
 var music = preload("res://audio/music/main_theme.ogg")
-AudioManager.play_music(music, true, 2.0)
+GGF.get_manager(&"AudioManager").play_music(music, true, 2.0)
 
 # Stop music with fade out
-AudioManager.stop_music(true, 1.5)
+GGF.get_manager(&"AudioManager").stop_music(true, 1.5)
 ```
 
 ### Playing Sound Effects
@@ -177,23 +177,23 @@ AudioManager.stop_music(true, 1.5)
 ```gdscript
 # Play a sound effect
 var jump_sound = preload("res://audio/sfx/jump.wav")
-AudioManager.play_sfx(jump_sound)
+GGF.get_manager(&"AudioManager").play_sfx(jump_sound)
 
 # Play quieter footstep sound
 var footstep = preload("res://audio/sfx/footstep.wav")
-AudioManager.play_sfx(footstep, 0.5)
+GGF.get_manager(&"AudioManager").play_sfx(footstep, 0.5)
 ```
 
 ### Volume Control
 
 ```gdscript
 # Set volumes
-AudioManager.set_master_volume(0.8)
-AudioManager.set_music_volume(0.7)
-AudioManager.set_sfx_volume(0.9)
+GGF.get_manager(&"AudioManager").set_master_volume(0.8)
+GGF.get_manager(&"AudioManager").set_music_volume(0.7)
+GGF.get_manager(&"AudioManager").set_sfx_volume(0.9)
 
 # Get current music
-var current = AudioManager.get_current_music()
+var current = GGF.get_manager(&"AudioManager").get_current_music()
 if current:
     print("Playing: ", current.resource_path)
 ```
@@ -201,7 +201,7 @@ if current:
 ### Extending AudioManager
 
 ```gdscript
-extends AudioManager
+extends GGF_AudioManager
 
 # Custom playlist implementation
 var playlist: Array[AudioStream] = []
@@ -236,8 +236,8 @@ AudioManager automatically listens to `setting_changed` events from SettingsMana
 
 ```gdscript
 # SettingsManager will automatically update AudioManager
-SettingsManager.set_setting("audio", "master_volume", 0.8)
-SettingsManager.set_setting("audio", "music_volume", 0.6)
+GGF.get_manager(&"SettingsManager").set_setting("audio", "master_volume", 0.8)
+GGF.get_manager(&"SettingsManager").set_setting("audio", "music_volume", 0.6)
 ```
 
 ### With EventManager
@@ -246,7 +246,7 @@ AudioManager subscribes to events and can be controlled through the event system
 
 ```gdscript
 # Manual event emission (handled automatically by SettingsManager)
-EventManager.emit("setting_changed", {
+GGF.events().emit("setting_changed", {
     "category": "audio",
     "key": "master_volume",
     "value": 0.8

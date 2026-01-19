@@ -129,7 +129,7 @@ Send a custom event to a specific peer (server only).
 
 ```gdscript
 func _on_host_button_pressed() -> void:
-    if NetworkManager.host(8910):
+    if GGF.get_manager(&"NetworkManager").host(8910):
         print("Hosting on port 8910")
     else:
         print("Failed to host")
@@ -145,7 +145,7 @@ func _on_network_host_started(port: int) -> void:
 func _on_join_button_pressed() -> void:
     var ip = $IPEdit.text
     var port = int($PortEdit.text)
-    if NetworkManager.join(ip, port):
+    if GGF.get_manager(&"NetworkManager").join(ip, port):
         print("Connecting to ", ip, ":", port)
     else:
         print("Failed to start connection")
@@ -162,7 +162,7 @@ func _on_network_connected(mode: String) -> void:
 ```gdscript
 # Server-side: Broadcast game events
 func _on_player_scored(player_id: int, points: int) -> void:
-    NetworkManager.broadcast_session_event("player_scored", {
+    GGF.get_manager(&"NetworkManager").broadcast_session_event("player_scored", {
         "player_id": player_id,
         "points": points,
         "total_score": get_player_score(player_id)
@@ -170,7 +170,7 @@ func _on_player_scored(player_id: int, points: int) -> void:
 
 # Client-side: Handle received events
 func _ready() -> void:
-    NetworkManager.session_event_received.connect(_on_session_event)
+    GGF.get_manager(&"NetworkManager").session_event_received.connect(_on_session_event)
 
 func _on_session_event(event_name: StringName, data: Dictionary) -> void:
     match event_name:
@@ -188,8 +188,8 @@ NetworkManager automatically mirrors its signals to EventManager:
 
 ```gdscript
 # Subscribe to network events through EventManager
-EventManager.subscribe("network_connected", _on_network_connected)
-EventManager.subscribe("peer_joined", _on_peer_joined)
+GGF.events().subscribe("network_connected", _on_network_connected)
+GGF.events().subscribe("peer_joined", _on_peer_joined)
 ```
 
 ### With GameManager
@@ -199,9 +199,9 @@ NetworkManager integrates with game state management:
 ```gdscript
 func _on_network_connected(mode: String) -> void:
     if mode == "server":
-        GameManager.change_state("LOBBY")
+        GGF.get_manager(&"GameManager").change_state("LOBBY")
     else:
-        GameManager.change_state("CONNECTING")
+        GGF.get_manager(&"GameManager").change_state("CONNECTING")
 ```
 
 ## Best Practices

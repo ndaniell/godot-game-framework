@@ -1,3 +1,4 @@
+class_name GGF_PoolManager
 extends Node
 
 ## PoolManager - Extensible object pooling system for the Godot Game Framework
@@ -239,10 +240,20 @@ func remove_pool(pool_name: String) -> void:
 	if not _pools.has(pool_name):
 		return
 	
-	# Clear pool first
+	# Clear pool first (moves active objects to inactive).
+	var pool := _pools[pool_name] as Dictionary
 	clear_pool(pool_name)
-	
-	# Remove pool
+
+	# Free pooled objects (Nodes are not refcounted; dropping references is not enough).
+	var inactive := pool.get("inactive", []) as Array
+	for obj in inactive:
+		if obj != null and is_instance_valid(obj):
+			if obj.get_parent():
+				obj.get_parent().remove_child(obj)
+			obj.queue_free()
+	inactive.clear()
+
+	# Remove pool record.
 	_pools.erase(pool_name)
 	_on_pool_removed(pool_name)
 

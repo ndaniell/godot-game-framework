@@ -1,3 +1,4 @@
+class_name GGF_ResourceManager
 extends Node
 
 ## ResourceManager - Extensible resource management system for the Godot Game Framework

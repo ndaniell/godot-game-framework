@@ -1,3 +1,4 @@
+class_name GGF_InputManager
 extends Node
 
 ## InputManager - Extensible input management system for the Godot Game Framework

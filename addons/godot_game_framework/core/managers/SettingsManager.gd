@@ -1,3 +1,4 @@
+class_name GGF_SettingsManager
 extends Node
 
 ## SettingsManager - Extensible settings management system for the Godot Game Framework

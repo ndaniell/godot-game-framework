@@ -1,3 +1,4 @@
+class_name GGF_EventManager
 extends Node
 
 ## EventManager - Extensible event system for the Godot Game Framework

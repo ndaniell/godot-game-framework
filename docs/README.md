@@ -60,7 +60,8 @@ Managers communicate through:
 
 ### Initialization Order
 
-Managers initialize in autoload order. Use `await get_tree().process_frame` if you need to wait for other managers.
+Managers are instantiated by the single autoload `GGF` in a dependency-friendly order.
+If your script depends on another manager being ready, use `await get_tree().process_frame` (or connect to a signal/event exposed by that manager).
 
 ## Additional Resources
 

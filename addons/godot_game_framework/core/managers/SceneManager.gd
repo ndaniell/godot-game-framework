@@ -1,3 +1,4 @@
+class_name GGF_SceneManager
 extends Node
 
 ## SceneManager - Extensible scene management system for the Godot Game Framework

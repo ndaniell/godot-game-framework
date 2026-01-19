@@ -1,3 +1,4 @@
+class_name GGF_TimeManager
 extends Node
 
 ## TimeManager - Extensible time management system for the Godot Game Framework

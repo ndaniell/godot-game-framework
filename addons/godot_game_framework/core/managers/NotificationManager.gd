@@ -1,3 +1,4 @@
+class_name GGF_NotificationManager
 extends CanvasLayer
 
 ## NotificationManager - Extensible notification system for the Godot Game Framework
@@ -214,14 +215,14 @@ func _animate_notification_out(notification_panel: Control, notification_id: Str
 	var tween := create_tween()
 	tween.parallel().tween_property(notification_panel, "modulate:a", 0.0, 0.3)
 	tween.parallel().tween_property(notification_panel, "position:x", notification_panel.position.x - 50.0, 0.3)
-	
-	await tween.finished
-	
-	# Remove notification
-	_remove_notification(notification_id)
-	
-	# Process queue
-	_process_notification_queue()
+
+	# Avoid `await tween.finished` here: if the game quits while a tween is in-flight,
+	# any suspended coroutine can keep the Tween alive and trigger "ObjectDB leaked at exit".
+	# Using a one-shot callback keeps teardown deterministic for headless/CI runs.
+	tween.finished.connect(func() -> void:
+		_remove_notification(notification_id)
+		_process_notification_queue()
+	, CONNECT_ONE_SHOT)
 
 ## Remove notification
 func _remove_notification(notification_id: String) -> void:

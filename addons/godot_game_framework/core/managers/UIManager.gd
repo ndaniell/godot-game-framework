@@ -1,3 +1,4 @@
+class_name GGF_UIManager
 extends CanvasLayer
 
 ## UIManager - Extensible UI management system for the Godot Game Framework

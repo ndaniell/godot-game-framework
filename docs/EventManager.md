@@ -61,7 +61,7 @@ Subscribe a callable to an event.
 
 **Example:**
 ```gdscript
-EventManager.subscribe("player_died", _on_player_died)
+GGF.events().subscribe("player_died", _on_player_died)
 
 func _on_player_died(data: Dictionary) -> void:
     var score = data.get("score", 0)
@@ -74,7 +74,7 @@ Convenience method to subscribe using an object and method name.
 
 **Example:**
 ```gdscript
-EventManager.subscribe_method("level_complete", self, "_on_level_complete")
+GGF.events().subscribe_method("level_complete", self, "_on_level_complete")
 ```
 
 #### `unsubscribe(event_name: String, callable: Callable) -> void`
@@ -101,7 +101,7 @@ Emit an event with optional data.
 
 **Example:**
 ```gdscript
-EventManager.emit("player_died", {
+GGF.events().emit("player_died", {
     "score": 1000,
     "level": 5,
     "position": player.global_position
@@ -168,14 +168,14 @@ Called when a listener is removed from an event.
 func _on_player_take_damage(amount: int) -> void:
     health -= amount
     if health <= 0:
-        EventManager.emit("player_died", {
+        GGF.events().emit("player_died", {
             "position": global_position,
             "score": current_score
         })
 
 # In your UI script
 func _ready() -> void:
-    EventManager.subscribe("player_died", _on_player_died)
+    GGF.events().subscribe("player_died", _on_player_died)
 
 func _on_player_died(data: Dictionary) -> void:
     show_game_over_screen(data.get("score", 0))
@@ -186,7 +186,7 @@ func _on_player_died(data: Dictionary) -> void:
 ```gdscript
 # In item script
 func _on_player_collect() -> void:
-    EventManager.emit("item_collected", {
+    GGF.events().emit("item_collected", {
         "item_type": "coin",
         "value": 10,
         "position": global_position
@@ -195,7 +195,7 @@ func _on_player_collect() -> void:
 
 # In inventory manager
 func _ready() -> void:
-    EventManager.subscribe("item_collected", _on_item_collected)
+    GGF.events().subscribe("item_collected", _on_item_collected)
 
 func _on_item_collected(data: Dictionary) -> void:
     var item_type = data.get("item_type", "")
@@ -215,9 +215,9 @@ func _on_item_collected(data: Dictionary) -> void:
 class_name QuestManager extends Node
 
 func _ready() -> void:
-    EventManager.subscribe("enemy_defeated", _on_enemy_defeated)
-    EventManager.subscribe("item_collected", _on_item_collected)
-    EventManager.subscribe("area_discovered", _on_area_discovered)
+    GGF.events().subscribe("enemy_defeated", _on_enemy_defeated)
+    GGF.events().subscribe("item_collected", _on_item_collected)
+    GGF.events().subscribe("area_discovered", _on_area_discovered)
 
 func _on_enemy_defeated(data: Dictionary) -> void:
     var enemy_type = data.get("enemy_type", "")
@@ -230,7 +230,7 @@ func _on_item_collected(data: Dictionary) -> void:
 func update_quest_progress(quest_type: String, target: String) -> void:
     # Update quest tracking
     if quest_completed(quest_type, target):
-        EventManager.emit("quest_completed", {
+        GGF.events().emit("quest_completed", {
             "quest_type": quest_type,
             "target": target
         })
@@ -239,7 +239,7 @@ func update_quest_progress(quest_type: String, target: String) -> void:
 ### Debugging with Event History
 
 ```gdscript
-extends EventManager
+extends GGF_EventManager
 
 func _on_event_manager_ready() -> void:
     enable_event_history = true
@@ -278,9 +278,9 @@ func _setup_achievements() -> void:
     }
 
 func _subscribe_to_events() -> void:
-    EventManager.subscribe("enemy_defeated", _check_achievements)
-    EventManager.subscribe("item_collected", _check_achievements)
-    EventManager.subscribe("area_discovered", _check_achievements)
+    GGF.events().subscribe("enemy_defeated", _check_achievements)
+    GGF.events().subscribe("item_collected", _check_achievements)
+    GGF.events().subscribe("area_discovered", _check_achievements)
 
 func _check_achievements(data: Dictionary) -> void:
     # Check and unlock achievements based on event data
@@ -292,8 +292,8 @@ func _check_achievements(data: Dictionary) -> void:
 
 func _unlock_achievement(achievement_id: String) -> void:
     achievements[achievement_id].unlocked = true
-    EventManager.emit("achievement_unlocked", {"id": achievement_id})
-    NotificationManager.show_success("Achievement Unlocked: " + achievement_id)
+    GGF.events().emit("achievement_unlocked", {"id": achievement_id})
+    GGF.notifications().show_success("Achievement Unlocked: " + achievement_id)
 ```
 
 ## Best Practices
@@ -302,12 +302,12 @@ func _unlock_achievement(achievement_id: String) -> void:
 
 ```gdscript
 # Good
-EventManager.emit("player_health_changed", {"health": 50, "max_health": 100})
-EventManager.emit("inventory_item_added", {"item": item_data})
+GGF.events().emit("player_health_changed", {"health": 50, "max_health": 100})
+GGF.events().emit("inventory_item_added", {"item": item_data})
 
 # Bad
-EventManager.emit("update", {"val": 50})
-EventManager.emit("event", {"data": item_data})
+GGF.events().emit("update", {"val": 50})
+GGF.events().emit("event", {"data": item_data})
 ```
 
 ### 2. Consistent Data Structures
@@ -321,7 +321,7 @@ const EVENT_PLAYER_DIED = {
 }
 
 # Use consistent keys
-EventManager.emit("player_died", {
+GGF.events().emit("player_died", {
     "position": player.global_position,
     "score": current_score,
     "level": current_level
@@ -334,11 +334,11 @@ EventManager.emit("player_died", {
 class_name EnemySpawner extends Node
 
 func _ready() -> void:
-    EventManager.subscribe("wave_started", _on_wave_started)
+    GGF.events().subscribe("wave_started", _on_wave_started)
 
 func _exit_tree() -> void:
     # Clean up subscriptions when node is removed
-    EventManager.unsubscribe("wave_started", _on_wave_started)
+    GGF.events().unsubscribe("wave_started", _on_wave_started)
 ```
 
 ### 4. Avoid Circular Dependencies
@@ -346,16 +346,16 @@ func _exit_tree() -> void:
 ```gdscript
 # Bad - Can cause infinite loops
 func _on_event_a(data: Dictionary) -> void:
-    EventManager.emit("event_b", data)
+    GGF.events().emit("event_b", data)
 
 func _on_event_b(data: Dictionary) -> void:
-    EventManager.emit("event_a", data)  # Circular!
+    GGF.events().emit("event_a", data)  # Circular!
 
 # Good - Use flags or conditions
 func _on_event_a(data: Dictionary) -> void:
     if not data.get("processed", false):
         data.processed = true
-        EventManager.emit("event_b", data)
+        GGF.events().emit("event_b", data)
 ```
 
 ### 5. Event Documentation

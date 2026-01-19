@@ -76,7 +76,7 @@ Remap an action to a new input event.
 ```gdscript
 var new_key = InputEventKey.new()
 new_key.keycode = KEY_SPACE
-InputManager.remap_action("jump", new_key)
+GGF.get_manager(&"InputManager").remap_action("jump", new_key)
 ```
 
 #### `reset_action(action: String) -> bool`
@@ -108,14 +108,15 @@ Check if using touch controls.
 
 ```gdscript
 func _process(_delta: float) -> void:
-    if InputManager.is_action_just_pressed("jump"):
+    var input := GGF.get_manager(&"InputManager")
+    if input.is_action_just_pressed("jump"):
         player.jump()
     
-    if InputManager.is_action_pressed("shoot"):
+    if input.is_action_pressed("shoot"):
         player.shoot()
     
     # Get movement vector
-    var input_vector = InputManager.get_action_vector(
+    var input_vector = input.get_action_vector(
         "move_left", "move_right",
         "move_up", "move_down"
     )
@@ -143,13 +144,13 @@ func _input(event: InputEvent) -> void:
         return
     
     if event is InputEventKey and event.pressed:
-        InputManager.remap_action(action_name, event)
+        GGF.get_manager(&"InputManager").remap_action(action_name, event)
         awaiting_input = false
         _update_button_text()
         accept_event()
 
 func _update_button_text() -> void:
-    var remaps = InputManager.get_action_remaps(action_name)
+    var remaps = GGF.get_manager(&"InputManager").get_action_remaps(action_name)
     if remaps.is_empty():
         text = "Unbound"
     else:
@@ -163,14 +164,14 @@ func _update_button_text() -> void:
 extends Control
 
 func _ready() -> void:
-    InputManager.input_mode_changed.connect(_on_input_mode_changed)
+    GGF.get_manager(&"InputManager").input_mode_changed.connect(_on_input_mode_changed)
     _update_button_prompts()
 
 func _on_input_mode_changed(mode: String) -> void:
     _update_button_prompts()
 
 func _update_button_prompts() -> void:
-    if InputManager.is_using_gamepad():
+    if GGF.get_manager(&"InputManager").is_using_gamepad():
         %JumpButton.text = "[A] Jump"
         %ShootButton.text = "[X] Shoot"
     else:

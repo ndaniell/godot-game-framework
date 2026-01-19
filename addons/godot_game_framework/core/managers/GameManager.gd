@@ -1,3 +1,4 @@
+class_name GGF_GameManager
 extends Node
 
 ## GameManager - Extensible game state management system for the Godot Game Framework

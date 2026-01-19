@@ -1,3 +1,4 @@
+class_name GGF_LogManager
 extends Node
 
 ## LogManager - Centralized logging service for the Godot Game Framework

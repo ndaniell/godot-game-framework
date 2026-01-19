@@ -121,16 +121,17 @@ Get the currently focused element.
 
 ```gdscript
 func _ready() -> void:
+    var ui := GGF.get_manager(&"UIManager")
     # Register UI elements
-    UIManager.register_ui_element("main_menu", $MainMenu, UIManager.menu_layer)
-    UIManager.register_ui_element("pause_menu", $PauseMenu, UIManager.menu_layer)
-    UIManager.register_ui_element("hud", $HUD, UIManager.game_layer)
-    UIManager.register_ui_element("settings_dialog", $SettingsDialog, UIManager.dialog_layer)
+    ui.register_ui_element("main_menu", $MainMenu, ui.menu_layer)
+    ui.register_ui_element("pause_menu", $PauseMenu, ui.menu_layer)
+    ui.register_ui_element("hud", $HUD, ui.game_layer)
+    ui.register_ui_element("settings_dialog", $SettingsDialog, ui.dialog_layer)
     
     # Show HUD, hide menus
-    UIManager.show_ui_element("hud")
-    UIManager.hide_ui_element("main_menu")
-    UIManager.hide_ui_element("pause_menu")
+    ui.show_ui_element("hud")
+    ui.hide_ui_element("main_menu")
+    ui.hide_ui_element("pause_menu")
 ```
 
 ### Pause Menu
@@ -138,12 +139,14 @@ func _ready() -> void:
 ```gdscript
 func _input(event: InputEvent) -> void:
     if event.is_action_pressed("ui_cancel"):
-        if GameManager.is_paused:
-            UIManager.close_menu("pause_menu")
-            GameManager.unpause_game()
+        var gm := GGF.get_manager(&"GameManager")
+        var ui := GGF.get_manager(&"UIManager")
+        if gm.is_paused:
+            ui.close_menu("pause_menu")
+            gm.unpause_game()
         else:
-            UIManager.open_menu("pause_menu")
-            GameManager.pause_game()
+            ui.open_menu("pause_menu")
+            gm.pause_game()
 ```
 
 ### Menu System
@@ -152,15 +155,17 @@ func _input(event: InputEvent) -> void:
 class_name MainMenu extends Control
 
 func _on_play_button_pressed() -> void:
-    UIManager.close_menu("main_menu")
-    GameManager.change_state("PLAYING")
-    GameManager.change_scene("res://scenes/level1.tscn", "fade")
+    var ui := GGF.get_manager(&"UIManager")
+    var gm := GGF.get_manager(&"GameManager")
+    ui.close_menu("main_menu")
+    gm.change_state("PLAYING")
+    gm.change_scene("res://scenes/level1.tscn", "fade")
 
 func _on_settings_button_pressed() -> void:
-    UIManager.open_dialog("settings_dialog")
+    GGF.get_manager(&"UIManager").open_dialog("settings_dialog")
 
 func _on_quit_button_pressed() -> void:
-    GameManager.quit_game()
+    GGF.get_manager(&"GameManager").quit_game()
 ```
 
 ### Dialog System
@@ -177,17 +182,18 @@ func _ready() -> void:
 
 func _on_confirm() -> void:
     confirmed.emit()
-    UIManager.close_dialog(name)
+    GGF.get_manager(&"UIManager").close_dialog(name)
 
 func _on_cancel() -> void:
     cancelled.emit()
-    UIManager.close_dialog(name)
+    GGF.get_manager(&"UIManager").close_dialog(name)
 
 # Usage
 func show_delete_confirmation(save_slot: int) -> void:
-    var dialog = UIManager.get_ui_element("confirm_dialog")
-    dialog.confirmed.connect(func(): SaveManager.delete_save(save_slot))
-    UIManager.open_dialog("confirm_dialog")
+    var ui := GGF.get_manager(&"UIManager")
+    var dialog = ui.get_ui_element("confirm_dialog")
+    dialog.confirmed.connect(func(): GGF.get_manager(&"SaveManager").delete_save(save_slot))
+    ui.open_dialog("confirm_dialog")
 ```
 
 ### Focus Management
@@ -195,10 +201,10 @@ func show_delete_confirmation(save_slot: int) -> void:
 ```gdscript
 func _ready() -> void:
     # Set initial focus
-    UIManager.set_focus($MainMenu/PlayButton)
+    GGF.get_manager(&"UIManager").set_focus($MainMenu/PlayButton)
     
     # Listen for focus changes
-    UIManager.focus_changed.connect(_on_focus_changed)
+    GGF.get_manager(&"UIManager").focus_changed.connect(_on_focus_changed)
 
 func _on_focus_changed(old_element: Control, new_element: Control) -> void:
     if old_element:

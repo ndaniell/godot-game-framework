@@ -112,16 +112,18 @@ func save_current_progress() -> void:
         "playtime": total_playtime,
         "date": Time.get_datetime_string_from_system()
     }
-    if SaveManager.save_game(0, metadata):
-        NotificationManager.show_success("Game Saved!")
+    var save_manager := GGF.get_manager(&"SaveManager")
+    if save_manager.save_game(0, metadata):
+        GGF.notifications().show_success("Game Saved!")
     else:
-        NotificationManager.show_error("Save Failed!")
+        GGF.notifications().show_error("Save Failed!")
 
 # Load
 func load_saved_game(slot: int) -> void:
-    if SaveManager.load_game(slot):
-        NotificationManager.show_success("Game Loaded!")
-        GameManager.change_scene("res://scenes/gameplay.tscn")
+    var save_manager := GGF.get_manager(&"SaveManager")
+    if save_manager.load_game(slot):
+        GGF.notifications().show_success("Game Loaded!")
+        GGF.get_manager(&"GameManager").change_scene("res://scenes/gameplay.tscn")
 ```
 
 ### Save Slot UI
@@ -141,8 +143,9 @@ func _ready() -> void:
     _update_display()
 
 func _update_display() -> void:
-    if SaveManager.save_exists(slot_number):
-        var metadata = SaveManager.get_save_metadata(slot_number)
+    var save_manager := GGF.get_manager(&"SaveManager")
+    if save_manager.save_exists(slot_number):
+        var metadata = save_manager.get_save_metadata(slot_number)
         label.text = "Level %d - %s" % [
             metadata.get("level", 1),
             metadata.get("date", "Unknown")
@@ -155,17 +158,17 @@ func _update_display() -> void:
         delete_button.disabled = true
 
 func _on_load_pressed() -> void:
-    SaveManager.load_game(slot_number)
+    GGF.get_manager(&"SaveManager").load_game(slot_number)
 
 func _on_delete_pressed() -> void:
-    SaveManager.delete_save(slot_number)
+    GGF.get_manager(&"SaveManager").delete_save(slot_number)
     _update_display()
 ```
 
 ### Custom Save Data
 
 ```gdscript
-extends SaveManager
+extends GGF_SaveManager
 
 # Override to save custom game data
 func _collect_player_data() -> Dictionary:
@@ -228,7 +231,7 @@ func _apply_world_data(world_data: Dictionary) -> void:
 ### Auto-Save System
 
 ```gdscript
-extends SaveManager
+extends GGF_SaveManager
 
 func _ready() -> void:
     super._ready()
@@ -238,12 +241,12 @@ func _ready() -> void:
     auto_save_interval = 300.0
     
     # Subscribe to checkpoint events
-    EventManager.subscribe("checkpoint_reached", _on_checkpoint_reached)
+    GGF.events().subscribe("checkpoint_reached", _on_checkpoint_reached)
 
 func _on_checkpoint_reached(data: Dictionary) -> void:
     # Manual save at checkpoints
     quick_save()
-    NotificationManager.show_info("Progress Saved")
+    GGF.notifications().show_info("Progress Saved")
 ```
 
 ## Best Practices

@@ -93,24 +93,26 @@ Get reference count for a resource.
 
 ```gdscript
 # Load with caching
-var texture = ResourceManager.load_resource("res://textures/player.png")
+var texture = GGF.get_manager(&"ResourceManager").load_resource("res://textures/player.png")
 player_sprite.texture = texture
 
 # Load without caching (for one-time use)
-var temp_texture = ResourceManager.load_resource("res://temp/splash.png", false)
+var temp_texture = GGF.get_manager(&"ResourceManager").load_resource("res://temp/splash.png", false)
 ```
 
 ### Async Loading
 
 ```gdscript
 func load_level_async() -> void:
-    UIManager.show_ui_element("loading_screen")
+    var ui := GGF.get_manager(&"UIManager")
+    var resources := GGF.get_manager(&"ResourceManager")
+    ui.show_ui_element("loading_screen")
     
     # Load resources asynchronously
-    var level_scene = await ResourceManager.load_resource_async("res://scenes/level.tscn")
-    var tileset = await ResourceManager.load_resource_async("res://tilesets/world.tres")
+    var level_scene = await resources.load_resource_async("res://scenes/level.tscn")
+    var tileset = await resources.load_resource_async("res://tilesets/world.tres")
     
-    UIManager.hide_ui_element("loading_screen")
+    ui.hide_ui_element("loading_screen")
     get_tree().change_scene_to_packed(level_scene)
 ```
 
@@ -128,7 +130,7 @@ var assets_to_preload: Array[String] = [
 
 func preload_all_assets() -> void:
     for asset_path in assets_to_preload:
-        ResourceManager.preload_resource(asset_path)
+        GGF.get_manager(&"ResourceManager").preload_resource(asset_path)
     print("Assets preloaded: ", assets_to_preload.size())
 
 func _ready() -> void:
@@ -138,7 +140,7 @@ func _ready() -> void:
 ### Memory Management
 
 ```gdscript
-extends ResourceManager
+extends GGF_ResourceManager
 
 func _ready() -> void:
     super._ready()
@@ -176,7 +178,7 @@ func _preload_level(level_num: int) -> void:
         return
     
     var level_path = "res://scenes/levels/level%d.tscn" % level_num
-    ResourceManager.preload_resource(level_path)
+    GGF.get_manager(&"ResourceManager").preload_resource(level_path)
 
 func load_next_level() -> void:
     current_level += 1
@@ -185,14 +187,14 @@ func load_next_level() -> void:
         return
     
     # Load current (already preloaded)
-    var level_scene = ResourceManager.load_resource(
+    var level_scene = GGF.get_manager(&"ResourceManager").load_resource(
         "res://scenes/levels/level%d.tscn" % current_level
     )
     get_tree().change_scene_to_packed(level_scene)
     
     # Unload previous level
     if current_level > 0:
-        ResourceManager.unload_resource(
+        GGF.get_manager(&"ResourceManager").unload_resource(
             "res://scenes/levels/level%d.tscn" % (current_level - 1)
         )
     

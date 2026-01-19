@@ -109,17 +109,17 @@ Override to cleanup object when despawning.
 # Create bullet pool
 func _ready() -> void:
     var bullet_scene = preload("res://scenes/bullet.tscn")
-    PoolManager.create_pool("bullets", bullet_scene, 20)
+    GGF.get_manager(&"PoolManager").create_pool("bullets", bullet_scene, 20)
 
 # Spawn bullets
 func shoot() -> void:
-    var bullet = PoolManager.spawn("bullets", gun_barrel.global_position)
+    var bullet = GGF.get_manager(&"PoolManager").spawn("bullets", gun_barrel.global_position)
     if bullet:
         bullet.direction = gun_barrel.global_transform.basis.z
 
 # Despawn on collision
 func _on_bullet_hit(bullet: Node) -> void:
-    PoolManager.despawn("bullets", bullet)
+    GGF.get_manager(&"PoolManager").despawn("bullets", bullet)
 ```
 
 ### Custom Bullet with Reset
@@ -142,7 +142,7 @@ func _process(delta: float) -> void:
     
     elapsed += delta
     if elapsed >= lifetime:
-        PoolManager.despawn("bullets", self)
+        GGF.get_manager(&"PoolManager").despawn("bullets", self)
 
 # Called by PoolManager when spawning
 func reset() -> void:
@@ -169,7 +169,7 @@ var enemy_types: Dictionary = {
 func _ready() -> void:
     # Create pools for each enemy type
     for type_name in enemy_types:
-        PoolManager.create_pool(
+        GGF.get_manager(&"PoolManager").create_pool(
             "enemy_" + type_name,
             enemy_types[type_name],
             10
@@ -180,7 +180,7 @@ func _ready() -> void:
 
 func spawn_enemy(type: String, position: Vector3) -> Node:
     var pool_name = "enemy_" + type
-    var enemy = PoolManager.spawn(pool_name, position, self)
+    var enemy = GGF.get_manager(&"PoolManager").spawn(pool_name, position, self)
     
     if enemy:
         enemy.died.connect(_on_enemy_died.bind(enemy, pool_name))
@@ -190,12 +190,12 @@ func spawn_enemy(type: String, position: Vector3) -> Node:
 func _on_enemy_died(enemy: Node, pool_name: String) -> void:
     # Wait for death animation
     await get_tree().create_timer(1.0).timeout
-    PoolManager.despawn(pool_name, enemy)
+    GGF.get_manager(&"PoolManager").despawn(pool_name, enemy)
 
 func _print_pool_stats() -> void:
     for type_name in enemy_types:
         var pool_name = "enemy_" + type_name
-        var stats = PoolManager.get_pool_stats(pool_name)
+        var stats = GGF.get_manager(&"PoolManager").get_pool_stats(pool_name)
         print("%s: %d active, %d inactive" % [
             pool_name,
             stats.active_count,
@@ -210,35 +210,35 @@ class_name VFXManager extends Node
 
 func _ready() -> void:
     # Create pools for common effects
-    PoolManager.create_pool(
+    GGF.get_manager(&"PoolManager").create_pool(
         "explosion",
         preload("res://vfx/explosion.tscn"),
         5
     )
-    PoolManager.create_pool(
+    GGF.get_manager(&"PoolManager").create_pool(
         "smoke",
         preload("res://vfx/smoke.tscn"),
         10
     )
     
-    EventManager.subscribe("explosion", _on_explosion)
+    GGF.events().subscribe("explosion", _on_explosion)
 
 func _on_explosion(data: Dictionary) -> void:
     var pos = data.get("position", Vector3.ZERO)
     spawn_effect("explosion", pos)
 
 func spawn_effect(effect_name: String, position: Vector3) -> void:
-    var effect = PoolManager.spawn(effect_name, position)
+    var effect = GGF.get_manager(&"PoolManager").spawn(effect_name, position)
     if effect and effect.has_signal("finished"):
         effect.finished.connect(
-            func(): PoolManager.despawn(effect_name, effect)
+            func(): GGF.get_manager(&"PoolManager").despawn(effect_name, effect)
         )
 ```
 
 ### Custom PoolManager
 
 ```gdscript
-extends PoolManager
+extends GGF_PoolManager
 
 # Custom reset for game-specific objects
 func _reset_object(obj: Node) -> void:
@@ -271,7 +271,7 @@ func _cleanup_object(obj: Node) -> void:
 ### Performance Monitoring
 
 ```gdscript
-extends PoolManager
+extends GGF_PoolManager
 
 var _stats_timer: Timer
 

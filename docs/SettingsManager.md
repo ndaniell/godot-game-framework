@@ -120,25 +120,26 @@ func _ready() -> void:
     sfx_slider.value_changed.connect(_on_sfx_volume_changed)
 
 func _load_current_settings() -> void:
-    fullscreen_check.button_pressed = SettingsManager.fullscreen
-    master_slider.value = SettingsManager.master_volume
-    music_slider.value = SettingsManager.music_volume
-    sfx_slider.value = SettingsManager.sfx_volume
+    var settings := GGF.get_manager(&"SettingsManager")
+    fullscreen_check.button_pressed = settings.fullscreen
+    master_slider.value = settings.master_volume
+    music_slider.value = settings.music_volume
+    sfx_slider.value = settings.sfx_volume
 
 func _on_fullscreen_toggled(enabled: bool) -> void:
-    SettingsManager.set_setting("graphics", "fullscreen", enabled)
+    GGF.get_manager(&"SettingsManager").set_setting("graphics", "fullscreen", enabled)
 
 func _on_master_volume_changed(value: float) -> void:
-    SettingsManager.set_setting("audio", "master_volume", value)
+    GGF.get_manager(&"SettingsManager").set_setting("audio", "master_volume", value)
 
 func _on_music_volume_changed(value: float) -> void:
-    SettingsManager.set_setting("audio", "music_volume", value)
+    GGF.get_manager(&"SettingsManager").set_setting("audio", "music_volume", value)
 
 func _on_sfx_volume_changed(value: float) -> void:
-    SettingsManager.set_setting("audio", "sfx_volume", value)
+    GGF.get_manager(&"SettingsManager").set_setting("audio", "sfx_volume", value)
 
 func _on_reset_pressed() -> void:
-    SettingsManager.reset_to_defaults()
+    GGF.get_manager(&"SettingsManager").reset_to_defaults()
     _load_current_settings()
 ```
 
@@ -160,7 +161,7 @@ func _ready() -> void:
         add_item("%d x %d" % [res.x, res.y])
     
     # Select current resolution
-    var current = SettingsManager.resolution
+    var current = GGF.get_manager(&"SettingsManager").resolution
     for i in range(RESOLUTIONS.size()):
         if RESOLUTIONS[i] == current:
             selected = i
@@ -169,7 +170,7 @@ func _ready() -> void:
     item_selected.connect(_on_resolution_selected)
 
 func _on_resolution_selected(index: int) -> void:
-    SettingsManager.set_setting("graphics", "resolution", RESOLUTIONS[index])
+    GGF.get_manager(&"SettingsManager").set_setting("graphics", "resolution", RESOLUTIONS[index])
 ```
 
 ### Custom Settings Category
@@ -178,13 +179,14 @@ func _on_resolution_selected(index: int) -> void:
 # Add custom settings
 func _ready() -> void:
     # Set custom gameplay settings
-    SettingsManager.set_setting("gameplay", "camera_shake", true)
-    SettingsManager.set_setting("gameplay", "motion_blur", false)
-    SettingsManager.set_setting("gameplay", "show_hints", true)
+    var settings := GGF.get_manager(&"SettingsManager")
+    settings.set_setting("gameplay", "camera_shake", true)
+    settings.set_setting("gameplay", "motion_blur", false)
+    settings.set_setting("gameplay", "show_hints", true)
 
 # Use custom settings
 func should_show_hints() -> bool:
-    return SettingsManager.get_setting("gameplay", "show_hints", true)
+    return GGF.get_manager(&"SettingsManager").get_setting("gameplay", "show_hints", true)
 ```
 
 ## Best Practices
@@ -202,14 +204,14 @@ func should_show_hints() -> bool:
 Audio settings automatically update AudioManager:
 ```gdscript
 # This automatically calls AudioManager.set_master_volume()
-SettingsManager.set_setting("audio", "master_volume", 0.8)
+GGF.get_manager(&"SettingsManager").set_setting("audio", "master_volume", 0.8)
 ```
 
 ### With EventManager
 
 Setting changes emit events:
 ```gdscript
-EventManager.subscribe("setting_changed", _on_setting_changed)
+GGF.events().subscribe("setting_changed", _on_setting_changed)
 
 func _on_setting_changed(data: Dictionary) -> void:
     var category = data.get("category", "")

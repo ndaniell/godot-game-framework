@@ -104,10 +104,10 @@ Override to customize hide animation.
 
 ```gdscript
 # Show different notification types
-NotificationManager.show_info("Game saved successfully")
-NotificationManager.show_success("Achievement unlocked!")
-NotificationManager.show_warning("Low health!")
-NotificationManager.show_error("Connection lost", 5.0)  # Show for 5 seconds
+GGF.notifications().show_info("Game saved successfully")
+GGF.notifications().show_success("Achievement unlocked!")
+GGF.notifications().show_warning("Low health!")
+GGF.notifications().show_error("Connection lost", 5.0)  # Show for 5 seconds
 ```
 
 ### Game Event Notifications
@@ -115,21 +115,21 @@ NotificationManager.show_error("Connection lost", 5.0)  # Show for 5 seconds
 ```gdscript
 # Player events
 func _on_player_level_up(new_level: int) -> void:
-    NotificationManager.show_success(
+    GGF.notifications().show_success(
         "Level Up! You are now level %d" % new_level,
         3.0
     )
 
 # Item pickup
 func _on_item_collected(item_name: String) -> void:
-    NotificationManager.show_info(
+    GGF.notifications().show_info(
         "Collected: %s" % item_name,
         2.0
     )
 
 # Quest completion
 func _on_quest_completed(quest_name: String, reward: int) -> void:
-    NotificationManager.show_success(
+    GGF.notifications().show_success(
         "Quest Complete: %s (+%d XP)" % [quest_name, reward],
         4.0
     )
@@ -140,9 +140,9 @@ func _on_quest_completed(quest_name: String, reward: int) -> void:
 ```gdscript
 # Clickable notification with callback
 func show_friend_request(friend_name: String) -> void:
-    NotificationManager.show_notification(
+    GGF.notifications().show_notification(
         "%s wants to be friends" % friend_name,
-        NotificationManager.NotificationType.INFO,
+        GGF_NotificationManager.NotificationType.INFO,
         10.0,  # Show for 10 seconds
         {
             "on_click": func(): _accept_friend_request(friend_name),
@@ -152,29 +152,29 @@ func show_friend_request(friend_name: String) -> void:
 
 func _accept_friend_request(friend_name: String) -> void:
     # Accept friend request
-    NotificationManager.show_success("You are now friends with %s!" % friend_name)
+    GGF.notifications().show_success("You are now friends with %s!" % friend_name)
 ```
 
 ### Custom Notification Manager
 
 ```gdscript
-extends NotificationManager
+extends GGF_NotificationManager
 
 # Custom notification styles
 var notification_styles = {
-    NotificationType.INFO: {
+    GGF_NotificationManager.NotificationType.INFO: {
         "color": Color(0.2, 0.6, 0.8),
         "icon": preload("res://ui/icons/info.png")
     },
-    NotificationType.SUCCESS: {
+    GGF_NotificationManager.NotificationType.SUCCESS: {
         "color": Color(0.2, 0.8, 0.3),
         "icon": preload("res://ui/icons/success.png")
     },
-    NotificationType.WARNING: {
+    GGF_NotificationManager.NotificationType.WARNING: {
         "color": Color(0.9, 0.7, 0.2),
         "icon": preload("res://ui/icons/warning.png")
     },
-    NotificationType.ERROR: {
+    GGF_NotificationManager.NotificationType.ERROR: {
         "color": Color(0.9, 0.2, 0.2),
         "icon": preload("res://ui/icons/error.png")
     }
@@ -240,9 +240,9 @@ func _animate_notification_out(notification: Control, notification_id: String) -
 class_name AchievementNotifier extends Node
 
 func show_achievement(achievement_name: String, description: String, icon: Texture2D) -> void:
-    NotificationManager.show_notification(
+    GGF.notifications().show_notification(
         "%s\n%s" % [achievement_name, description],
-        NotificationManager.NotificationType.SUCCESS,
+        GGF_NotificationManager.NotificationType.SUCCESS,
         5.0,
         {
             "icon": icon,
@@ -258,25 +258,25 @@ class_name GameErrorHandler extends Node
 
 func _ready() -> void:
     # Subscribe to error events
-    EventManager.subscribe("network_error", _on_network_error)
-    EventManager.subscribe("save_error", _on_save_error)
-    EventManager.subscribe("load_error", _on_load_error)
+    GGF.events().subscribe("network_error", _on_network_error)
+    GGF.events().subscribe("save_error", _on_save_error)
+    GGF.events().subscribe("load_error", _on_load_error)
 
 func _on_network_error(data: Dictionary) -> void:
     var error = data.get("error", "Unknown error")
-    NotificationManager.show_error(
+    GGF.notifications().show_error(
         "Network Error: %s" % error,
         5.0
     )
 
 func _on_save_error(data: Dictionary) -> void:
-    NotificationManager.show_error(
+    GGF.notifications().show_error(
         "Failed to save game. Please try again.",
         4.0
     )
 
 func _on_load_error(data: Dictionary) -> void:
-    NotificationManager.show_error(
+    GGF.notifications().show_error(
         "Failed to load save file.",
         4.0
     )
@@ -292,10 +292,10 @@ var current_notification_id: String = ""
 func show_progress(message: String) -> void:
     # Hide previous progress notification
     if not current_notification_id.is_empty():
-        NotificationManager.hide_notification(current_notification_id)
+        GGF.notifications().hide_notification(current_notification_id)
     
     # Show new one that doesn't auto-dismiss
-    current_notification_id = NotificationManager.show_info(
+    current_notification_id = GGF.notifications().show_info(
         message,
         999.0  # Very long duration
     )
@@ -303,11 +303,11 @@ func show_progress(message: String) -> void:
 func complete_progress(final_message: String) -> void:
     # Hide progress notification
     if not current_notification_id.is_empty():
-        NotificationManager.hide_notification(current_notification_id)
+        GGF.notifications().hide_notification(current_notification_id)
         current_notification_id = ""
     
     # Show completion
-    NotificationManager.show_success(final_message, 3.0)
+    GGF.notifications().show_success(final_message, 3.0)
 
 # Usage
 func download_assets() -> void:
@@ -319,7 +319,7 @@ func download_assets() -> void:
 ### Notification Sound System
 
 ```gdscript
-extends NotificationManager
+extends GGF_NotificationManager
 
 var notification_sounds = {
     NotificationType.INFO: preload("res://audio/ui/notification_info.wav"),
@@ -331,7 +331,7 @@ var notification_sounds = {
 func _on_notification_shown(notification_id: String, message: String, type: NotificationType, data: Dictionary) -> void:
     # Play sound for notification type
     if notification_sounds.has(type):
-        AudioManager.play_sfx(notification_sounds[type], 0.7)
+        GGF.get_manager(&"AudioManager").play_sfx(notification_sounds[type], 0.7)
 ```
 
 ## Best Practices
@@ -349,11 +349,11 @@ func _on_notification_shown(notification_id: String, message: String, type: Noti
 
 Listen for game events and show notifications:
 ```gdscript
-EventManager.subscribe("achievement_unlocked", _on_achievement)
-EventManager.subscribe("player_died", _on_player_died)
+GGF.events().subscribe("achievement_unlocked", _on_achievement)
+GGF.events().subscribe("player_died", _on_player_died)
 
 func _on_achievement(data: Dictionary) -> void:
-    NotificationManager.show_success(
+    GGF.notifications().show_success(
         "Achievement: %s" % data.get("name", "")
     )
 ```
@@ -362,14 +362,14 @@ func _on_achievement(data: Dictionary) -> void:
 
 Show save/load feedback:
 ```gdscript
-SaveManager.save_created.connect(
+GGF.get_manager(&"SaveManager").save_created.connect(
     func(slot, metadata):
-        NotificationManager.show_success("Game Saved!")
+        GGF.notifications().show_success("Game Saved!")
 )
 
-SaveManager.save_failed.connect(
+GGF.get_manager(&"SaveManager").save_failed.connect(
     func(slot, error):
-        NotificationManager.show_error("Save Failed: %s" % error)
+        GGF.notifications().show_error("Save Failed: %s" % error)
 )
 ```
 

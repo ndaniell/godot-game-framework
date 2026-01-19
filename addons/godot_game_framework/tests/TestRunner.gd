@@ -19,6 +19,7 @@ extends Node
 
 var test_framework: Node
 var test_registry: RefCounted
+var _exit_code: int = 0
 
 func _ready() -> void:
 	# Wait for GGF to bootstrap managers
@@ -82,7 +83,17 @@ func _register_manager_tests() -> void:
 
 ## Run all registered tests
 func run_all_tests() -> Dictionary:
-	var results = test_framework.run_registered_suites(test_registry)
+	var results: Dictionary = test_framework.run_registered_suites(test_registry)
+
+	# Propagate failure to the process exit code (CI-friendly).
+	_exit_code = 0
+	var failed_val: Variant = results.get("failed", 0)
+	if failed_val is int and failed_val > 0:
+		_exit_code = 1
+	else:
+		var all_passed_val: Variant = results.get("all_passed", true)
+		if all_passed_val is bool and not all_passed_val:
+			_exit_code = 1
 	# Quit immediately after tests complete (for headless mode)
 	# Use call_deferred to ensure all output is flushed first
 	call_deferred("_quit_tree")
@@ -94,16 +105,18 @@ func _quit_tree() -> void:
 	var tree = get_tree()
 	if tree == null:
 		return
+
+	# Kill any in-flight tweens before quitting.
+	# In headless runs, we can exit while short UI tweens are still active (e.g. notifications),
+	# which triggers "ObjectDB instances leaked at exit".
+	for tween in tree.get_processed_tweens():
+		if tween != null and tween.is_valid():
+			tween.kill()
 	
-	await tree.process_frame
-	await tree.process_frame
-	
-	if get_parent() != null:
-		get_parent().remove_child(self)
-	free()
-	
-	await tree.process_frame
-	tree.quit(0)
+	# Give queued frees/timers a chance to flush before exiting (helps avoid leak warnings).
+	for _i in range(5):
+		await tree.process_frame
+	tree.quit(_exit_code)
 
 func _cleanup_resources() -> void:
 	if _manager_tests != null:

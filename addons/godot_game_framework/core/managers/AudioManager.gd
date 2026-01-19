@@ -1,3 +1,4 @@
+class_name GGF_AudioManager
 extends Node
 
 ## AudioManager - Extensible audio management system for the Godot Game Framework

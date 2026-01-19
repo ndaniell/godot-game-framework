@@ -138,11 +138,12 @@ Format time as HH:MM:SS string.
 ```gdscript
 func trigger_slow_motion() -> void:
     # Slow to 50% for 2 seconds
-    TimeManager.slow_motion(0.5, 2.0)
+    var time_manager := GGF.get_manager(&"TimeManager")
+    time_manager.slow_motion(0.5, 2.0)
     
     # Slow motion visual effects
     _apply_slow_mo_shader()
-    await TimeManager.timer_completed
+    await time_manager.timer_completed
     _remove_slow_mo_shader()
 ```
 
@@ -154,13 +155,14 @@ class_name PowerupTimer extends Node
 func activate_speed_boost(duration: float) -> void:
     player.speed *= 2.0
     
-    TimeManager.create_timer("speed_boost", duration)
-    TimeManager.timer_completed.connect(_on_speed_boost_ended, CONNECT_ONE_SHOT)
+    var time_manager := GGF.get_manager(&"TimeManager")
+    time_manager.create_timer("speed_boost", duration)
+    time_manager.timer_completed.connect(_on_speed_boost_ended, CONNECT_ONE_SHOT)
 
 func _on_speed_boost_ended(timer_id: String) -> void:
     if timer_id == "speed_boost":
         player.speed /= 2.0
-        NotificationManager.show_info("Speed Boost Ended")
+        GGF.notifications().show_info("Speed Boost Ended")
 ```
 
 ### Playtime Tracker
@@ -171,14 +173,17 @@ class_name PlaytimeTracker extends Node
 @export var save_slot: int = 0
 
 func get_playtime() -> String:
-    return TimeManager.format_time(TimeManager.get_game_time())
+    var time_manager := GGF.get_manager(&"TimeManager")
+    return time_manager.format_time(time_manager.get_game_time())
 
 func get_session_time() -> String:
-    return TimeManager.format_time(TimeManager.get_real_time())
+    var time_manager := GGF.get_manager(&"TimeManager")
+    return time_manager.format_time(time_manager.get_real_time())
 
 func save_playtime() -> void:
-    SaveManager.save_game(save_slot, {
-        "playtime": TimeManager.get_game_time(),
+    var time_manager := GGF.get_manager(&"TimeManager")
+    GGF.get_manager(&"SaveManager").save_game(save_slot, {
+        "playtime": time_manager.get_game_time(),
         "formatted": get_playtime()
     })
 ```
@@ -186,7 +191,7 @@ func save_playtime() -> void:
 ### Day/Night Cycle
 
 ```gdscript
-extends TimeManager
+extends GGF_TimeManager
 
 func _ready() -> void:
     super._ready()
@@ -203,13 +208,13 @@ func _on_day_night_changed(is_day_time: bool) -> void:
     if is_day_time:
         # Switch to day lighting
         _transition_to_day()
-        EventManager.emit("time_of_day", {"time": "day"})
+        GGF.events().emit("time_of_day", {"time": "day"})
     else:
         # Switch to night lighting
         _transition_to_night()
-        EventManager.emit("time_of_day", {"time": "night"})
+        GGF.events().emit("time_of_day", {"time": "night"})
         # Spawn night enemies
-        EventManager.emit("spawn_night_enemies", {})
+        GGF.events().emit("spawn_night_enemies", {})
 
 func _transition_to_day() -> void:
     var tween = create_tween()
@@ -230,15 +235,16 @@ class_name CooldownManager extends Node
 var cooldowns: Dictionary = {}
 
 func start_cooldown(ability_id: String, duration: float) -> void:
-    TimeManager.create_timer("cooldown_" + ability_id, duration)
+    var time_manager := GGF.get_manager(&"TimeManager")
+    time_manager.create_timer("cooldown_" + ability_id, duration)
     cooldowns[ability_id] = duration
-    TimeManager.timer_completed.connect(_on_cooldown_complete)
+    time_manager.timer_completed.connect(_on_cooldown_complete)
 
 func _on_cooldown_complete(timer_id: String) -> void:
     if timer_id.begins_with("cooldown_"):
         var ability_id = timer_id.replace("cooldown_", "")
         cooldowns.erase(ability_id)
-        EventManager.emit("cooldown_ready", {"ability": ability_id})
+        GGF.events().emit("cooldown_ready", {"ability": ability_id})
 
 func is_on_cooldown(ability_id: String) -> bool:
     return cooldowns.has(ability_id)
@@ -246,12 +252,12 @@ func is_on_cooldown(ability_id: String) -> bool:
 func get_cooldown_remaining(ability_id: String) -> float:
     if not is_on_cooldown(ability_id):
         return 0.0
-    return TimeManager.get_timer_remaining("cooldown_" + ability_id)
+    return GGF.get_manager(&"TimeManager").get_timer_remaining("cooldown_" + ability_id)
 
 func get_cooldown_progress(ability_id: String) -> float:
     if not is_on_cooldown(ability_id):
         return 1.0
-    return TimeManager.get_timer_progress("cooldown_" + ability_id)
+    return GGF.get_manager(&"TimeManager").get_timer_progress("cooldown_" + ability_id)
 ```
 
 ### Time-Based Scoring
@@ -265,17 +271,18 @@ var start_time: float = 0.0
 var running: bool = false
 
 func start_speedrun() -> void:
-    start_time = TimeManager.get_game_time()
+    start_time = GGF.get_manager(&"TimeManager").get_game_time()
     running = true
 
 func stop_speedrun() -> float:
     running = false
-    return TimeManager.get_game_time() - start_time
+    return GGF.get_manager(&"TimeManager").get_game_time() - start_time
 
 func _process(_delta: float) -> void:
     if running:
-        var elapsed = TimeManager.get_game_time() - start_time
-        time_label.text = TimeManager.format_time(elapsed, true)
+        var time_manager := GGF.get_manager(&"TimeManager")
+        var elapsed = time_manager.get_game_time() - start_time
+        time_label.text = time_manager.format_time(elapsed, true)
 ```
 
 ## Best Practices
@@ -292,8 +299,8 @@ func _process(_delta: float) -> void:
 
 Time automatically pauses when game is paused:
 ```gdscript
-GameManager.pause_game()  # TimeManager.time_scale set to 0
-GameManager.unpause_game()  # TimeManager.time_scale restored
+GGF.get_manager(&"GameManager").pause_game()  # TimeManager.time_scale set to 0
+GGF.get_manager(&"GameManager").unpause_game()  # TimeManager.time_scale restored
 ```
 
 ### With EventManager
