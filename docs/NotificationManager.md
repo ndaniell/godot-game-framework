@@ -343,6 +343,25 @@ func _on_notification_shown(notification_id: String, message: String, type: Noti
 5. **Use sounds sparingly** - Don't overwhelm with audio feedback
 6. **Test positioning** - Ensure notifications don't cover important UI
 
+## Customization (Scene-based toasts)
+
+`NotificationManager` can instance a toast scene defined by `GGF_UIConfig`.
+
+### Override config file
+
+- **Project override**: create `res://ggf_ui_config.tres`
+- **Fallback**: `res://addons/godot_game_framework/resources/ui/ggf_ui_config_default.tres`
+
+### Toast contract
+
+Your configured `notification_toast_scene` must instance a `Control`. It should expose:
+
+- `set_message(message: String) -> void` (**required**)
+- `set_notification_type(type: int) -> void` (optional)
+- `set_notification_data(data: Dictionary) -> void` (optional)
+
+If the scene is missing or doesn’t match the contract, the manager falls back to its built-in Panel+Label notification.
+
 ## Integration
 
 ### With EventManager

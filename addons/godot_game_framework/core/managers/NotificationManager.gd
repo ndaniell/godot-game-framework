@@ -10,6 +10,9 @@ signal notification_shown(notification_id: String, data: Dictionary)
 signal notification_hidden(notification_id: String)
 signal notification_clicked(notification_id: String)
 
+const _OVERRIDE_UI_CONFIG_PATH := "res://ggf_ui_config.tres"
+const _DEFAULT_UI_CONFIG_PATH := "res://addons/godot_game_framework/resources/ui/ggf_ui_config_default.tres"
+
 # Notification types
 enum NotificationType {
 	INFO,
@@ -32,6 +35,10 @@ var _notifications: Dictionary = {}  # id -> { "node": Control, "data": Dictiona
 var _notification_queue: Array[Dictionary] = []
 var _next_id: int = 0
 
+var _ui_config: Resource = null
+var _notification_toast_scene: PackedScene = null
+var _notification_container: Control = null
+
 
 ## Initialize the notification manager
 ## Override this method to add custom initialization
@@ -48,6 +55,39 @@ func _ready() -> void:
 ## Override this method to customize initialization
 func _initialize_notification_manager() -> void:
 	layer = 100  # High layer to appear on top
+	_load_and_apply_ui_config()
+
+
+func _load_and_apply_ui_config() -> void:
+	_ui_config = _load_ui_config_resource()
+	if _ui_config == null:
+		return
+
+	var toast_scene_val: Variant = _ui_config.get("notification_toast_scene")
+	if toast_scene_val is PackedScene:
+		_notification_toast_scene = toast_scene_val as PackedScene
+
+	var container_scene_val: Variant = _ui_config.get("notification_container_scene")
+	if container_scene_val is PackedScene:
+		var inst := (container_scene_val as PackedScene).instantiate()
+		if inst is Control:
+			_notification_container = inst as Control
+			add_child(_notification_container)
+		else:
+			if inst != null:
+				inst.queue_free()
+			GGF.log().warn(
+				"NotificationManager",
+				"notification_container_scene must instance a Control; ignoring"
+			)
+
+
+func _load_ui_config_resource() -> Resource:
+	if ResourceLoader.exists(_OVERRIDE_UI_CONFIG_PATH):
+		return load(_OVERRIDE_UI_CONFIG_PATH) as Resource
+	if ResourceLoader.exists(_DEFAULT_UI_CONFIG_PATH):
+		return load(_DEFAULT_UI_CONFIG_PATH) as Resource
+	return null
 
 
 ## Show a notification
@@ -93,7 +133,15 @@ func show_notification(
 		return ""
 
 	# Add to scene tree
-	add_child(notification_node)
+	if _notification_container != null:
+		_notification_container.add_child(notification_node)
+	else:
+		add_child(notification_node)
+
+	# Make clickable if data has callback
+	if data.has("on_click"):
+		notification_node.gui_input.connect(_handle_notification_clicked.bind(notification_id))
+		notification_node.mouse_filter = Control.MOUSE_FILTER_STOP
 
 	# Position notification
 	_position_notification(notification_node, _notifications.size())
@@ -157,6 +205,27 @@ func hide_all_notifications() -> void:
 func _create_notification_node(
 	message: String, type: NotificationType, data: Dictionary
 ) -> Control:
+	if _notification_toast_scene != null:
+		var inst := _notification_toast_scene.instantiate()
+		if inst is Control:
+			var toast := inst as Control
+			if toast.has_method("set_message"):
+				toast.call("set_message", message)
+			elif toast.has_node("MessageLabel"):
+				var label := toast.get_node("MessageLabel") as Label
+				if label != null:
+					label.text = message
+			if toast.has_method("set_notification_type"):
+				toast.call("set_notification_type", int(type))
+			if toast.has_method("set_notification_data"):
+				toast.call("set_notification_data", data)
+
+			_set_notification_style(toast, type)
+			return toast
+		if inst != null:
+			inst.queue_free()
+		GGF.log().warn("NotificationManager", "Toast scene did not instance a Control; using fallback")
+
 	# Create a simple label-based notification
 	# Override this to create custom notification UI
 	var panel := PanelContainer.new()
@@ -186,12 +255,6 @@ func _create_notification_node(
 
 	# Set style based on type
 	_set_notification_style(panel, type)
-
-	# Make clickable if data has callback
-	if data.has("on_click"):
-		var notification_id: String = data.get("id", "")
-		panel.gui_input.connect(_handle_notification_clicked.bind(notification_id))
-		panel.mouse_filter = Control.MOUSE_FILTER_STOP
 
 	return panel
 

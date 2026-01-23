@@ -221,6 +221,29 @@ func _on_focus_changed(old_element: Control, new_element: Control) -> void:
 4. **Handle focus** for keyboard/gamepad navigation
 5. **Use fade animations** for polish
 
+## Customization (Scenes + Overrides)
+
+The framework can optionally build its UI structure from scenes, and allows host projects to override those scenes.
+
+### Override config file
+
+- **Project override**: create `res://ggf_ui_config.tres`
+- **Fallback**: `res://addons/godot_game_framework/resources/ui/ggf_ui_config_default.tres`
+
+The config resource type is `GGF_UIConfig` (`addons/godot_game_framework/core/types/UIConfig.gd`).
+
+### Shipped default scenes
+
+The addon ships these scenes under `addons/godot_game_framework/resources/ui/`:
+
+- `UIRoot.tscn` (layer containers: `Background`, `Game`, `UI`, `Menu`, `Dialog`, `Overlay`)
+- `NotificationToast.tscn` + `NotificationToast.gd`
+- Templates: `MenuTemplate.tscn`, `DialogTemplate.tscn`, `ConfirmDialogTemplate.tscn`, `SettingsDialogTemplate.tscn`
+
+### Register UI from scenes
+
+`UIManager` includes `register_ui_scene(name, packed_scene, layer)` which instances a `PackedScene` (must be a `Control`) and registers it like `register_ui_element(...)`.
+
 ## See Also
 
 - [GameManager](GameManager.md) - For game state coordination

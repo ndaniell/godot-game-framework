@@ -1,0 +1,32 @@
+[gd_scene load_steps=1 format=3]
+
+[node name="ConfirmDialogTemplate" type="Window"]
+title = "Confirm"
+size = Vector2i(420, 220)
+
+[node name="Margin" type="MarginContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = 0.0
+offset_bottom = 0.0
+
+[node name="VBox" type="VBoxContainer" parent="Margin"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = 0.0
+offset_bottom = 0.0
+
+[node name="Message" type="Label" parent="Margin/VBox"]
+text = "Are you sure?"
+autowrap_mode = 3
+
+[node name="Buttons" type="HBoxContainer" parent="Margin/VBox"]
+
+[node name="ConfirmButton" type="Button" parent="Margin/VBox/Buttons"]
+text = "Confirm"
+
+[node name="CancelButton" type="Button" parent="Margin/VBox/Buttons"]
+text = "Cancel"
+

@@ -1,0 +1,24 @@
+[gd_scene load_steps=1 format=3]
+
+[node name="SettingsDialogTemplate" type="Window"]
+title = "Settings"
+size = Vector2i(560, 360)
+
+[node name="Margin" type="MarginContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = 0.0
+offset_bottom = 0.0
+
+[node name="VBox" type="VBoxContainer" parent="Margin"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = 0.0
+offset_bottom = 0.0
+
+[node name="Placeholder" type="Label" parent="Margin/VBox"]
+text = "Add settings controls here."
+autowrap_mode = 3
+
