@@ -13,9 +13,11 @@ signal menu_closed(menu_name: String)
 signal dialog_opened(dialog_name: String)
 signal dialog_closed(dialog_name: String)
 signal focus_changed(old_element: Control, new_element: Control)
+signal ui_ready
 
 const _OVERRIDE_UI_CONFIG_PATH := "res://ggf_ui_config.tres"
 const _DEFAULT_UI_CONFIG_PATH := "res://addons/godot_game_framework/resources/ui/ggf_ui_config_default.tres"
+const _DEFAULT_UI_ROOT_SCENE_PATH := "res://addons/godot_game_framework/resources/ui/UIRoot.tscn"
 
 # UI layers
 @export_group("UI Layers")
@@ -41,6 +43,7 @@ var _ui_config: Resource = null
 var _ui_root: Control = null
 var _layer_containers: Dictionary = {}  # int -> Control
 var _root_container: Control = null
+var _is_ready := false
 
 
 ## Initialize the UI manager
@@ -51,6 +54,8 @@ func _ready() -> void:
 	_load_and_apply_ui_config()
 	_initialize_ui_manager()
 	_on_ui_manager_ready()
+	_is_ready = true
+	ui_ready.emit()
 
 
 ## Initialize UI layers
@@ -71,48 +76,56 @@ func _ensure_root_container() -> void:
 
 ## Load and apply optional UI config Resource.
 func _load_and_apply_ui_config() -> void:
-	_ui_config = _load_ui_config_resource()
-	if _ui_config == null:
+	if _ui_root != null and is_instance_valid(_ui_root):
 		return
 
-	var ui_root_scene_val: Variant = _ui_config.get("ui_root_scene")
-	if ui_root_scene_val is PackedScene:
-		var ui_root_inst := (ui_root_scene_val as PackedScene).instantiate()
-		if ui_root_inst is Control:
-			_ui_root = ui_root_inst as Control
-			if _root_container != null and is_instance_valid(_root_container):
-				_root_container.add_child(_ui_root)
-			else:
-				add_child(_ui_root)
-			_cache_layer_containers()
-			_apply_container_z_indices()
-		else:
-			if ui_root_inst != null:
-				ui_root_inst.queue_free()
-			GGF.log().warn("UIManager", "ui_root_scene must instance a Control; using default behavior")
+	_ui_config = _load_ui_config_resource()
 
-	var pre_registered_val: Variant = _ui_config.get("pre_registered")
-	if pre_registered_val is Array:
-		for entry_val in pre_registered_val:
-			if not (entry_val is Dictionary):
-				continue
-			var entry := entry_val as Dictionary
-			var name_val: Variant = entry.get("name", "")
-			var scene_val: Variant = entry.get("scene", null)
-			var layer_val: Variant = entry.get("layer", -1)
-			var visible_val: Variant = entry.get("visible", false)
+	var ui_root_scene: PackedScene = null
+	if _ui_config != null:
+		var ui_root_scene_val: Variant = _ui_config.get("ui_root_scene")
+		if ui_root_scene_val is PackedScene:
+			ui_root_scene = ui_root_scene_val as PackedScene
 
-			var element_name: String = name_val if name_val is String else ""
-			var scene: PackedScene = scene_val as PackedScene
-			var z_layer: int = layer_val if layer_val is int else -1
-			var is_visible: bool = visible_val if visible_val is bool else false
+	if ui_root_scene == null:
+		ui_root_scene = _load_default_ui_root_scene()
 
-			if element_name.is_empty() or scene == null:
-				continue
+	if ui_root_scene != null:
+		if not _instantiate_ui_root(ui_root_scene):
+			GGF.log().error("UIManager", "Failed to instance UI root scene")
+	else:
+		GGF.log().error(
+			"UIManager",
+			"Cannot load UI root scene: no config and default scene missing",
+		)
 
-			var ctrl := register_ui_scene(element_name, scene, z_layer)
-			if ctrl != null and is_visible:
-				show_ui_element(element_name)
+	if _ui_config != null:
+		var pre_registered_val: Variant = _ui_config.get("pre_registered")
+		if pre_registered_val is Array:
+			for entry_val in pre_registered_val:
+				if not (entry_val is Dictionary):
+					continue
+				var entry := entry_val as Dictionary
+				var name_val: Variant = entry.get("name", "")
+				var scene_val: Variant = entry.get("scene", null)
+				var layer_val: Variant = entry.get("layer", -1)
+				var visible_val: Variant = entry.get("visible", false)
+
+				var element_name: String = name_val if name_val is String else ""
+				var scene: PackedScene = scene_val as PackedScene
+				var z_layer: int = layer_val if layer_val is int else -1
+				var should_be_visible: bool = visible_val if visible_val is bool else false
+
+				if element_name.is_empty() or scene == null:
+					continue
+
+				var ctrl := register_ui_scene(element_name, scene, z_layer)
+				if ctrl != null:
+					# Ensure pre-registered elements honor config visibility.
+					# Scenes instance visible=true by default; we want config to be authoritative.
+					ctrl.visible = should_be_visible
+					if should_be_visible:
+						show_ui_element(element_name)
 
 
 func _load_ui_config_resource() -> Resource:
@@ -121,6 +134,34 @@ func _load_ui_config_resource() -> Resource:
 	if ResourceLoader.exists(_DEFAULT_UI_CONFIG_PATH):
 		return load(_DEFAULT_UI_CONFIG_PATH) as Resource
 	return null
+
+
+func _load_default_ui_root_scene() -> PackedScene:
+	if not ResourceLoader.exists(_DEFAULT_UI_ROOT_SCENE_PATH):
+		return null
+	return load(_DEFAULT_UI_ROOT_SCENE_PATH) as PackedScene
+
+
+func _instantiate_ui_root(scene: PackedScene) -> bool:
+	if scene == null:
+		return false
+
+	var ui_root_inst := scene.instantiate()
+	if ui_root_inst is Control:
+		_ui_root = ui_root_inst as Control
+		if _root_container != null and is_instance_valid(_root_container):
+			_root_container.add_child(_ui_root)
+		else:
+			add_child(_ui_root)
+		_cache_layer_containers()
+		_apply_container_z_indices()
+		return true
+
+	if ui_root_inst != null:
+		ui_root_inst.queue_free()
+
+	GGF.log().error("UIManager", "UI root scene must instance a Control")
+	return false
 
 
 func _cache_layer_containers() -> void:
@@ -154,6 +195,14 @@ func _apply_container_z_indices() -> void:
 		var container := _layer_containers[z] as Control
 		if container != null:
 			container.z_index = int(z)
+
+
+func is_ready() -> bool:
+	return _is_ready
+
+
+func get_overlay_container() -> Control:
+	return get_layer_container(overlay_layer)
 
 
 ## Get the container Control for a layer (z-index).

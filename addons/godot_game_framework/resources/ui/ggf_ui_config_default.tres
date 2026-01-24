@@ -1,13 +1,20 @@
-[gd_resource type="Resource" script_class="GGF_UIConfig" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="GGF_UIConfig" load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://addons/godot_game_framework/core/types/UIConfig.gd" id="1_config"]
 [ext_resource type="PackedScene" path="res://addons/godot_game_framework/resources/ui/UIRoot.tscn" id="2_ui_root"]
 [ext_resource type="PackedScene" path="res://addons/godot_game_framework/resources/ui/NotificationToast.tscn" id="3_toast"]
+[ext_resource type="PackedScene" path="res://addons/godot_game_framework/resources/ui/NotificationContainer.tscn" id="4_container"]
+[ext_resource type="PackedScene" path="res://addons/godot_game_framework/resources/ui/DiagnosticsOverlay.tscn" id="5_diagnostics"]
 
 [resource]
 script = ExtResource("1_config")
 ui_root_scene = ExtResource("2_ui_root")
 notification_toast_scene = ExtResource("3_toast")
-notification_container_scene = null
-pre_registered = []
+notification_container_scene = ExtResource("4_container")
+pre_registered = [{
+"name": "DiagnosticsOverlay",
+"scene": ExtResource("5_diagnostics"),
+"layer": 5,
+"visible": false
+}]
 

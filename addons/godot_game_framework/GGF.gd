@@ -6,6 +6,8 @@ extends Node
 ## On startup, it instantiates all framework managers (as children of this node)
 ## with prefixed names like `GGF_LogManager`, avoiding collisions in host projects.
 
+signal ggf_ready
+
 const MANAGER_GROUP_PREFIX := &"ggf.manager."
 const MANAGER_NODE_PREFIX := "GGF_"
 
@@ -17,10 +19,13 @@ const _TYPE_SCRIPTS: Array[String] = [
 
 var _managers: Dictionary = {}  # StringName -> Node
 var _bootstrapped := false
+var _is_ready := false
 
 
 func _enter_tree() -> void:
 	_bootstrap()
+	# Ensure readiness binding happens even if host overrides `_bootstrap()`.
+	call_deferred("_bind_ready_signal")
 
 
 func _bootstrap() -> void:
@@ -89,6 +94,44 @@ func _bootstrap() -> void:
 	_ensure_manager(
 		&"UIManager", _load_script("res://addons/godot_game_framework/core/managers/UIManager.gd")
 	)
+
+	_bind_ready_signal()
+
+
+func is_ready() -> bool:
+	return _is_ready
+
+
+func _bind_ready_signal() -> void:
+	# Emit `ggf_ready` deterministically once UIManager has finished initializing.
+	# This is useful for starting state machines only after UI is available.
+	if _is_ready:
+		return
+
+	var ui := get_manager(&"UIManager")
+	if ui == null:
+		call_deferred("_emit_ready")
+		return
+
+	if ui.has_method("is_ready"):
+		var ready_val: Variant = ui.call("is_ready")
+		if ready_val is bool and (ready_val as bool):
+			call_deferred("_emit_ready")
+			return
+
+	if ui.has_signal("ui_ready"):
+		var cb := Callable(self, "_emit_ready")
+		if not ui.is_connected("ui_ready", cb):
+			ui.connect("ui_ready", cb, CONNECT_ONE_SHOT)
+	else:
+		call_deferred("_emit_ready")
+
+
+func _emit_ready() -> void:
+	if _is_ready:
+		return
+	_is_ready = true
+	ggf_ready.emit()
 
 
 func _load_script(path: String) -> Script:

@@ -10,6 +10,10 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 offset_right = 0.0
 offset_bottom = 0.0
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_bottom = 16
 
 [node name="VBox" type="VBoxContainer" parent="Margin"]
 anchors_preset = 15
@@ -17,6 +21,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 offset_right = 0.0
 offset_bottom = 0.0
+theme_override_constants/separation = 12
 
 [node name="Content" type="Label" parent="Margin/VBox"]
 text = "Dialog content goes here."

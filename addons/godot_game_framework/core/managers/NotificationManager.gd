@@ -1,5 +1,5 @@
 class_name GGF_NotificationManager
-extends CanvasLayer
+extends Node
 
 ## NotificationManager - Extensible notification system for the Godot Game Framework
 ##
@@ -12,6 +12,10 @@ signal notification_clicked(notification_id: String)
 
 const _OVERRIDE_UI_CONFIG_PATH := "res://ggf_ui_config.tres"
 const _DEFAULT_UI_CONFIG_PATH := "res://addons/godot_game_framework/resources/ui/ggf_ui_config_default.tres"
+const _DEFAULT_NOTIFICATION_TOAST_SCENE_PATH := "res://addons/godot_game_framework/resources/ui/NotificationToast.tscn"
+const _DEFAULT_NOTIFICATION_CONTAINER_SCENE_PATH := (
+	"res://addons/godot_game_framework/resources/ui/NotificationContainer.tscn"
+)
 
 # Notification types
 enum NotificationType {
@@ -37,7 +41,9 @@ var _next_id: int = 0
 
 var _ui_config: Resource = null
 var _notification_toast_scene: PackedScene = null
+var _notification_container_scene: PackedScene = null
 var _notification_container: Control = null
+var _is_hosted_under_ui := false
 
 
 ## Initialize the notification manager
@@ -54,8 +60,8 @@ func _ready() -> void:
 ## Initialize notification manager
 ## Override this method to customize initialization
 func _initialize_notification_manager() -> void:
-	layer = 100  # High layer to appear on top
 	_load_and_apply_ui_config()
+	_bind_to_ui_manager()
 
 
 func _load_and_apply_ui_config() -> void:
@@ -69,10 +75,11 @@ func _load_and_apply_ui_config() -> void:
 
 	var container_scene_val: Variant = _ui_config.get("notification_container_scene")
 	if container_scene_val is PackedScene:
-		var inst := (container_scene_val as PackedScene).instantiate()
+		_notification_container_scene = container_scene_val as PackedScene
+		var inst := _notification_container_scene.instantiate()
 		if inst is Control:
 			_notification_container = inst as Control
-			add_child(_notification_container)
+			# Hosted under UIManager once UI is ready.
 		else:
 			if inst != null:
 				inst.queue_free()
@@ -133,6 +140,7 @@ func show_notification(
 		return ""
 
 	# Add to scene tree
+	_ensure_container_hosted()
 	if _notification_container != null:
 		_notification_container.add_child(notification_node)
 	else:
@@ -142,6 +150,8 @@ func show_notification(
 	if data.has("on_click"):
 		notification_node.gui_input.connect(_handle_notification_clicked.bind(notification_id))
 		notification_node.mouse_filter = Control.MOUSE_FILTER_STOP
+	else:
+		notification_node.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	# Position notification
 	_position_notification(notification_node, _notifications.size())
@@ -205,58 +215,39 @@ func hide_all_notifications() -> void:
 func _create_notification_node(
 	message: String, type: NotificationType, data: Dictionary
 ) -> Control:
-	if _notification_toast_scene != null:
-		var inst := _notification_toast_scene.instantiate()
-		if inst is Control:
-			var toast := inst as Control
-			if toast.has_method("set_message"):
-				toast.call("set_message", message)
-			elif toast.has_node("MessageLabel"):
-				var label := toast.get_node("MessageLabel") as Label
-				if label != null:
-					label.text = message
-			if toast.has_method("set_notification_type"):
-				toast.call("set_notification_type", int(type))
-			if toast.has_method("set_notification_data"):
-				toast.call("set_notification_data", data)
+	var toast_scene := _get_notification_toast_scene()
+	if toast_scene == null:
+		GGF.log().error(
+			"NotificationManager",
+			"Cannot create notification toast: no toast scene configured and default missing",
+		)
+		return null
 
-			_set_notification_style(toast, type)
-			return toast
+	var inst := toast_scene.instantiate()
+	if not (inst is Control):
 		if inst != null:
 			inst.queue_free()
-		GGF.log().warn("NotificationManager", "Toast scene did not instance a Control; using fallback")
+		GGF.log().error(
+			"NotificationManager",
+			"Notification toast scene must instance a Control",
+		)
+		return null
 
-	# Create a simple label-based notification
-	# Override this to create custom notification UI
-	var panel := PanelContainer.new()
-	var margin := MarginContainer.new()
-	var label := Label.new()
+	var toast := inst as Control
+	if toast.has_method("set_message"):
+		toast.call("set_message", message)
+	elif toast.has_node("MessageLabel"):
+		var label := toast.get_node("MessageLabel") as Label
+		if label != null:
+			label.text = message
+	if toast.has_method("set_notification_type"):
+		toast.call("set_notification_type", int(type))
+	if toast.has_method("set_notification_data"):
+		toast.call("set_notification_data", data)
 
-	# Configure panel
-	panel.custom_minimum_size = Vector2(300, 60)
-
-	# Configure label
-	label.text = message
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-
-	# Ensure the label gets a real width (prevents per-character wrapping / vertical text).
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 10)
-	margin.add_theme_constant_override("margin_right", 10)
-	margin.add_theme_constant_override("margin_top", 10)
-	margin.add_theme_constant_override("margin_bottom", 10)
-	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-
-	margin.add_child(label)
-	panel.add_child(margin)
-
-	# Set style based on type
-	_set_notification_style(panel, type)
-
-	return panel
+	_set_notification_style(toast, type)
+	toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return toast
 
 
 ## Set notification style based on type
@@ -458,3 +449,139 @@ func _on_notification_clicked(_notification_id: String, _data: Dictionary) -> vo
 ## Override to handle all notifications hidden
 func _on_all_notifications_hidden() -> void:
 	pass
+
+
+func _bind_to_ui_manager() -> void:
+	var ui := _get_ui_manager()
+	if ui == null:
+		return
+
+	if ui.has_signal("ui_ready"):
+		if not ui.is_connected("ui_ready", Callable(self, "_on_ui_manager_ui_ready")):
+			ui.connect("ui_ready", Callable(self, "_on_ui_manager_ui_ready"), CONNECT_ONE_SHOT)
+
+	# Also attempt a deferred attach in case UI is already ready.
+	call_deferred("_attach_container_to_ui")
+
+
+func _on_ui_manager_ui_ready() -> void:
+	_attach_container_to_ui()
+
+
+func _ensure_container_hosted() -> void:
+	if _notification_container == null or not is_instance_valid(_notification_container):
+		_notification_container = _create_default_container()
+
+	if _notification_container == null or not is_instance_valid(_notification_container):
+		return
+
+	_configure_notification_container(_notification_container)
+
+	if _is_hosted_under_ui:
+		return
+
+	_attach_container_to_ui()
+
+
+func _attach_container_to_ui() -> void:
+	if _notification_container == null or not is_instance_valid(_notification_container):
+		_notification_container = _create_default_container()
+		if _notification_container == null or not is_instance_valid(_notification_container):
+			return
+
+	var ui := _get_ui_manager()
+	if ui == null:
+		return
+
+	if ui.has_method("is_ready"):
+		var ready_val: Variant = ui.call("is_ready")
+		if ready_val is bool and not (ready_val as bool):
+			return
+
+	if not ui.has_method("get_overlay_container"):
+		return
+
+	var overlay_val: Variant = ui.call("get_overlay_container")
+	var overlay := overlay_val as Control
+	if overlay == null:
+		return
+
+	var current_parent := _notification_container.get_parent()
+	_configure_notification_container(_notification_container)
+	if current_parent != overlay:
+		if current_parent != null:
+			current_parent.remove_child(_notification_container)
+		overlay.add_child(_notification_container)
+	_is_hosted_under_ui = true
+
+
+func _configure_notification_container(container: Control) -> void:
+	container.name = "NotificationContainer"
+	container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	container.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	container.position = Vector2.ZERO
+	container.z_index = 1000
+
+
+func _create_default_container() -> Control:
+	var container_scene := _get_notification_container_scene()
+	if container_scene == null:
+		GGF.log().error(
+			"NotificationManager",
+			"Cannot create notification container: no container scene configured and default missing",
+		)
+		return null
+
+	var inst := container_scene.instantiate()
+	if not (inst is Control):
+		if inst != null:
+			inst.queue_free()
+		GGF.log().error(
+			"NotificationManager",
+			"Notification container scene must instance a Control",
+		)
+		return null
+
+	var c := inst as Control
+	_configure_notification_container(c)
+	return c
+
+
+func _get_notification_toast_scene() -> PackedScene:
+	if _notification_toast_scene != null:
+		return _notification_toast_scene
+
+	if not ResourceLoader.exists(_DEFAULT_NOTIFICATION_TOAST_SCENE_PATH):
+		return null
+
+	var loaded := load(_DEFAULT_NOTIFICATION_TOAST_SCENE_PATH)
+	var scene := loaded as PackedScene
+	if scene == null:
+		return null
+
+	_notification_toast_scene = scene
+	return _notification_toast_scene
+
+
+func _get_notification_container_scene() -> PackedScene:
+	if _notification_container_scene != null:
+		return _notification_container_scene
+
+	if not ResourceLoader.exists(_DEFAULT_NOTIFICATION_CONTAINER_SCENE_PATH):
+		return null
+
+	var loaded := load(_DEFAULT_NOTIFICATION_CONTAINER_SCENE_PATH)
+	var scene := loaded as PackedScene
+	if scene == null:
+		return null
+
+	_notification_container_scene = scene
+	return _notification_container_scene
+
+
+func _get_ui_manager() -> Node:
+	if GGF == null:
+		return null
+	if not GGF.has_method("get_manager"):
+		return null
+	return GGF.call("get_manager", &"UIManager") as Node

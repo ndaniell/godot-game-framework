@@ -21,6 +21,18 @@ const _DEFAULT_STATES_CONFIG_PATH := (
 @export_group("State Machine Configuration")
 @export var states_config_path: String = _DEFAULT_STATES_CONFIG_PATH
 
+@export_group("State Properties Overrides")
+## Optional per-state properties merged on top of the loaded state definitions.
+## Useful for host projects that want to reuse the framework's default states but
+## still add project-specific behavior (e.g. open a menu on MENU state).
+##
+## Structure:
+##   {
+##     "MENU": { "ui": { "open_menu": "main_menu" } },
+##     "PLAYING": { "change_scene": "res://scenes/World.tscn", "ui": { "close_all_menus": true } },
+##   }
+@export var state_property_overrides: Dictionary = {}
+
 # Current game state (string-based, loaded from configuration)
 var current_state: String = "":
 	set(value):
@@ -54,6 +66,8 @@ var _scene_transition_in_progress: bool = false
 # State machine configuration resource
 var _state_config: Resource = null
 var _default_state: String = "MENU"
+var _state_machine_started := false
+var _initial_state_to_start: String = ""
 
 
 ## Initialize the game manager
@@ -63,6 +77,7 @@ func _ready() -> void:
 
 	GGF.log().info("GameManager", "GameManager initializing...")
 	_initialize_game()
+	_bind_and_maybe_start_state_machine()
 	_on_game_ready()
 	GGF.log().info("GameManager", "GameManager ready")
 
@@ -148,11 +163,10 @@ func _load_state_definitions() -> void:
 
 	GGF.log().info("GameManager", "State machine initialized with default state: " + _default_state)
 
-	# Set initial state
+	# Defer initial state transition until the framework signals readiness.
+	# This keeps startup deterministic for UI-driven games (menus are pre-registered by UIManager).
 	if current_state.is_empty():
-		current_state = _default_state
-		# Trigger initial state transition to call entry callbacks and apply properties
-		_handle_state_transition("", _default_state)
+		_initial_state_to_start = _default_state
 
 
 ## Change game state
@@ -225,6 +239,9 @@ func _handle_state_transition(old_state: String, new_state: String) -> void:
 	if not entry_callback.is_empty():
 		_call_state_callback(entry_callback, new_state)
 
+	# Apply optional state properties (data-driven behavior).
+	_apply_state_properties(new_state_def)
+
 
 ## Call a state callback method by name
 func _call_state_callback(callback_name: String, state_name: String) -> void:
@@ -238,6 +255,169 @@ func _call_state_callback(callback_name: String, state_name: String) -> void:
 			"GameManager",
 			"State callback method '" + callback_name + "' not found for state '" + state_name + "'"
 		)
+
+
+## Apply state properties for the active state definition.
+## This enables data-driven behavior without requiring per-project GameManager overrides.
+##
+## Supported keys under `properties`:
+## - change_scene: String (path)
+## - transition_type: String (optional; used with change_scene)
+## - ui: Dictionary (optional namespace). If present, UI keys are read from here.
+##
+## Supported UI keys (either directly in `properties` or under `properties.ui`):
+## - close_all_menus: bool
+## - close_all_dialogs: bool
+## - open_menu: String
+## - open_menu_close_others: bool (optional, default true)
+## - open_dialog: String
+## - open_dialog_modal: bool (optional, default true)
+## - show_ui_element: String
+## - hide_ui_element: String
+func _apply_state_properties(state_def: Resource) -> void:
+	if state_def == null:
+		return
+
+	var props_val: Variant = state_def.get("properties")
+	var props: Dictionary = props_val if props_val is Dictionary else {}
+	props = _merge_state_property_overrides(state_def, props)
+
+	# Scene change.
+	var scene_val: Variant = props.get("change_scene", "")
+	var scene_path: String = scene_val if scene_val is String else ""
+	if not scene_path.is_empty():
+		var transition_val: Variant = props.get("transition_type", "")
+		var transition_type: String = transition_val if transition_val is String else ""
+		change_scene(scene_path, transition_type)
+
+	_apply_state_ui_properties(props)
+
+
+func _apply_state_ui_properties(props: Dictionary) -> void:
+	var ui_props: Dictionary = props
+	var ui_sub: Variant = props.get("ui", null)
+	if ui_sub is Dictionary:
+		ui_props = ui_sub as Dictionary
+
+	var close_menus_val: Variant = ui_props.get("close_all_menus", false)
+	var close_menus: bool = close_menus_val is bool and (close_menus_val as bool)
+
+	var close_dialogs_val: Variant = ui_props.get("close_all_dialogs", false)
+	var close_dialogs: bool = close_dialogs_val is bool and (close_dialogs_val as bool)
+
+	var open_menu_val: Variant = ui_props.get("open_menu", "")
+	var open_menu: String = open_menu_val if open_menu_val is String else ""
+
+	var open_dialog_val: Variant = ui_props.get("open_dialog", "")
+	var open_dialog: String = open_dialog_val if open_dialog_val is String else ""
+
+	var show_element_val: Variant = ui_props.get("show_ui_element", "")
+	var show_element: String = show_element_val if show_element_val is String else ""
+
+	var hide_element_val: Variant = ui_props.get("hide_ui_element", "")
+	var hide_element: String = hide_element_val if hide_element_val is String else ""
+
+	var has_ui_actions := close_menus \
+		or close_dialogs \
+		or not open_menu.is_empty() \
+		or not open_dialog.is_empty() \
+		or not show_element.is_empty() \
+		or not hide_element.is_empty()
+
+	if not has_ui_actions:
+		return
+
+	var ui := GGF.get_manager(&"UIManager")
+	if ui == null:
+		return
+
+	# Apply UI actions (UI is ready).
+	if close_menus and ui.has_method("close_all_menus"):
+		ui.call("close_all_menus")
+
+	if close_dialogs and ui.has_method("close_all_dialogs"):
+		ui.call("close_all_dialogs")
+
+	if not open_menu.is_empty() and ui.has_method("open_menu"):
+		var close_others_val: Variant = ui_props.get("open_menu_close_others", true)
+		var close_others: bool = close_others_val is bool and (close_others_val as bool)
+		ui.call("open_menu", open_menu, close_others)
+
+	if not open_dialog.is_empty() and ui.has_method("open_dialog"):
+		var modal_val: Variant = ui_props.get("open_dialog_modal", true)
+		var modal: bool = modal_val is bool and (modal_val as bool)
+		ui.call("open_dialog", open_dialog, modal)
+
+	if not show_element.is_empty() and ui.has_method("show_ui_element"):
+		ui.call("show_ui_element", show_element)
+
+	if not hide_element.is_empty() and ui.has_method("hide_ui_element"):
+		ui.call("hide_ui_element", hide_element)
+
+
+func _merge_state_property_overrides(state_def: Resource, base_props: Dictionary) -> Dictionary:
+	var name_val: Variant = state_def.get("name") if state_def != null else ""
+	var state_name: String = name_val if name_val is String else ""
+	if state_name.is_empty():
+		return base_props
+
+	var override_val: Variant = state_property_overrides.get(state_name, null)
+	if not (override_val is Dictionary):
+		return base_props
+
+	var override := override_val as Dictionary
+	if override.is_empty():
+		return base_props
+
+	var merged := base_props.duplicate(true)
+	for k in override.keys():
+		var ov: Variant = override[k]
+		if merged.has(k) and merged[k] is Dictionary and ov is Dictionary:
+			var inner := (merged[k] as Dictionary).duplicate(true)
+			for ik in (ov as Dictionary).keys():
+				inner[ik] = (ov as Dictionary)[ik]
+			merged[k] = inner
+		else:
+			merged[k] = ov
+	return merged
+
+
+func _bind_and_maybe_start_state_machine() -> void:
+	if _state_machine_started:
+		return
+	if _initial_state_to_start.is_empty():
+		return
+
+	# If the framework exposes a readiness signal, start deterministically after it fires.
+	if GGF != null and GGF.has_method("is_ready"):
+		var ready_val: Variant = GGF.call("is_ready")
+		if ready_val is bool and (ready_val as bool):
+			_start_state_machine()
+			return
+
+	if GGF != null and GGF.has_signal("ggf_ready"):
+		var cb := Callable(self, "_start_state_machine")
+		if not GGF.is_connected("ggf_ready", cb):
+			GGF.connect("ggf_ready", cb, CONNECT_ONE_SHOT)
+		return
+
+	# Fallback: start next frame.
+	call_deferred("_start_state_machine")
+
+
+func _start_state_machine() -> void:
+	if _state_machine_started:
+		return
+	if _initial_state_to_start.is_empty():
+		return
+
+	_state_machine_started = true
+	var start_state := _initial_state_to_start
+	_initial_state_to_start = ""
+
+	if current_state.is_empty():
+		current_state = start_state
+		_handle_state_transition("", start_state)
 
 
 ## Pause the game
