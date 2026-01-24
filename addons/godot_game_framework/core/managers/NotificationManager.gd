@@ -152,9 +152,6 @@ func show_notification(
 	# Make clickable if data has callback
 	if data.has("on_click"):
 		notification_node.gui_input.connect(_handle_notification_clicked.bind(notification_id))
-		notification_node.mouse_filter = Control.MOUSE_FILTER_STOP
-	else:
-		notification_node.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	# Position notification
 	_position_notification(notification_node, _notifications.size())
@@ -257,7 +254,6 @@ func _create_notification_node(
 		toast.call("set_notification_data", data)
 
 	_set_notification_style(toast, type)
-	toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return toast
 
 
@@ -528,7 +524,6 @@ func _attach_container_to_ui() -> void:
 
 func _configure_notification_container(container: Control) -> void:
 	container.name = "NotificationContainer"
-	container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	container.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 	container.position = Vector2.ZERO
 	container.z_index = 1000

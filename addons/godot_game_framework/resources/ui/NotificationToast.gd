@@ -8,26 +8,22 @@ extends PanelContainer
 ## - optional: `set_notification_type(type: int) -> void`
 ## - optional: `set_notification_data(data: Dictionary) -> void`
 
+var _pending_message: String = ""
+var _has_pending_message := false
+
 @onready var _message_label: Label = $Margin/MessageLabel
-@onready var _margin: MarginContainer = $Margin
 
 
 func _ready() -> void:
-	if _margin != null:
-		_margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		_margin.add_theme_constant_override("margin_left", 10)
-		_margin.add_theme_constant_override("margin_right", 10)
-		_margin.add_theme_constant_override("margin_top", 10)
-		_margin.add_theme_constant_override("margin_bottom", 10)
-
-	if _message_label != null:
-		_message_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		_message_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	if _message_label != null and _has_pending_message:
+		_message_label.text = _pending_message
 
 
 func set_message(message: String) -> void:
+	_pending_message = message
+	_has_pending_message = true
 	if _message_label != null:
-		_message_label.text = message
+		_message_label.text = _pending_message
 
 
 func set_notification_type(_type: int) -> void:

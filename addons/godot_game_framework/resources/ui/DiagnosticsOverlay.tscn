@@ -1,94 +1,92 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=3 format=3 uid="uid://b5amvu62d4opu"]
 
-[ext_resource type="Script" path="res://addons/godot_game_framework/resources/ui/DiagnosticsOverlay.gd" id="1_script"]
-[ext_resource type="Script" path="res://addons/godot_game_framework/resources/ui/MetricsGraph.gd" id="2_graph_script"]
+[ext_resource type="Script" uid="uid://b00byllkj25rk" path="res://addons/godot_game_framework/resources/ui/DiagnosticsOverlay.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://d04006fb2v7p7" path="res://addons/godot_game_framework/resources/ui/MetricsGraph.gd" id="2_graph_script"]
 
 [node name="DiagnosticsOverlay" type="Control"]
+visible = false
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 2
 script = ExtResource("1_script")
-visible = false
 
 [node name="Panel" type="PanelContainer" parent="."]
 custom_minimum_size = Vector2(420, 220)
-anchors_preset = 0
+layout_mode = 0
 offset_left = 14.0
 offset_top = 14.0
 offset_right = 434.0
 offset_bottom = 234.0
 
 [node name="Margin" type="MarginContainer" parent="Panel"]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_right = 0.0
-offset_bottom = 0.0
+layout_mode = 2
 theme_override_constants/margin_left = 14
-theme_override_constants/margin_right = 14
 theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 14
 theme_override_constants/margin_bottom = 12
 
 [node name="VBox" type="VBoxContainer" parent="Panel/Margin"]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_right = 0.0
-offset_bottom = 0.0
+layout_mode = 2
 theme_override_constants/separation = 10
 
 [node name="Header" type="HBoxContainer" parent="Panel/Margin/VBox"]
+layout_mode = 2
 theme_override_constants/separation = 10
 
 [node name="Title" type="Label" parent="Panel/Margin/VBox/Header"]
-text = "Diagnostics"
+layout_mode = 2
 size_flags_horizontal = 3
+text = "Diagnostics"
 
 [node name="ExpandButton" type="Button" parent="Panel/Margin/VBox/Header"]
+layout_mode = 2
 text = "Expand"
 
 [node name="FpsRow" type="HBoxContainer" parent="Panel/Margin/VBox"]
+layout_mode = 2
 theme_override_constants/separation = 10
 
 [node name="FpsToggle" type="CheckButton" parent="Panel/Margin/VBox/FpsRow"]
-text = "Show FPS"
+layout_mode = 2
 button_pressed = true
+text = "Show FPS"
 
 [node name="FpsValue" type="Label" parent="Panel/Margin/VBox/FpsRow"]
-text = "0 fps"
+layout_mode = 2
 size_flags_horizontal = 3
+text = "0 fps"
 horizontal_alignment = 2
 
 [node name="GraphPanel" type="PanelContainer" parent="Panel/Margin/VBox"]
 custom_minimum_size = Vector2(0, 120)
+layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
 [node name="Graph" type="Control" parent="Panel/Margin/VBox/GraphPanel"]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_right = 0.0
-offset_bottom = 0.0
+layout_mode = 2
 script = ExtResource("2_graph_script")
 
 [node name="Extras" type="VBoxContainer" parent="Panel/Margin/VBox"]
 visible = false
+layout_mode = 2
 theme_override_constants/separation = 10
 
 [node name="GraphControls" type="HBoxContainer" parent="Panel/Margin/VBox/Extras"]
+layout_mode = 2
 theme_override_constants/separation = 10
 
 [node name="WindowLabel" type="Label" parent="Panel/Margin/VBox/Extras/GraphControls"]
+layout_mode = 2
 text = "Window"
 
 [node name="WindowOption" type="OptionButton" parent="Panel/Margin/VBox/Extras/GraphControls"]
+layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="MetricsList" type="VBoxContainer" parent="Panel/Margin/VBox/Extras"]
+layout_mode = 2
 theme_override_constants/separation = 8
-

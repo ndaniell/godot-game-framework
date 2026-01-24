@@ -1,16 +1,23 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=2 format=3 uid="uid://byo6vkw0yv1fg"]
 
-[ext_resource type="Script" path="res://addons/godot_game_framework/resources/ui/NotificationToast.gd" id="1_toast_script"]
+[ext_resource type="Script" uid="uid://28cm7cdiq286" path="res://addons/godot_game_framework/resources/ui/NotificationToast.gd" id="1_toast_script"]
 
 [node name="NotificationToast" type="PanelContainer"]
 custom_minimum_size = Vector2(300, 60)
 script = ExtResource("1_toast_script")
 
 [node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
 
 [node name="MessageLabel" type="Label" parent="Margin"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
 text = "Notification"
-autowrap_mode = 3
-horizontal_alignment = 0
 vertical_alignment = 1
-
+autowrap_mode = 3

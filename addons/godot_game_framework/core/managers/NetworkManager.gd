@@ -203,6 +203,9 @@ func _on_peer_disconnected(peer_id: int) -> void:
 
 
 func _on_connected_to_server() -> void:
+	# This signal is meant for clients; hosts should rely on `host()` success messaging.
+	if multiplayer.is_server():
+		return
 	network_connected.emit("client")
 	_emit_eventmanager("network_connected", {"mode": "client"})
 	_notify_success("Connected")
@@ -243,8 +246,8 @@ func _notify_error(msg: String) -> void:
 
 ## Update LogManager with current network context
 func _update_logging_context() -> void:
-	var log := GGF.log()
-	if log and log.has_method("update_network_context"):
+	var logger := GGF.log()
+	if logger and logger.has_method("update_network_context"):
 		var peer_id := multiplayer.get_unique_id() if multiplayer.multiplayer_peer else 0
 		var is_server := multiplayer.is_server() if multiplayer.multiplayer_peer else false
-		log.update_network_context(peer_id, is_server)
+		logger.update_network_context(peer_id, is_server)

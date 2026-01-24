@@ -1,0 +1,158 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://addons/godot_game_framework/resources/ui/SettingsDialog.gd" id="1_script"]
+
+[sub_resource type="StyleBoxFlat" id="1"]
+bg_color = Color(0.09, 0.10, 0.12, 0.92)
+border_color = Color(0.18, 0.20, 0.24, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+shadow_color = Color(0, 0, 0, 0.35)
+shadow_size = 10
+content_margin_left = 24
+content_margin_right = 24
+content_margin_top = 22
+content_margin_bottom = 22
+
+[node name="SettingsDialog" type="Control"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.55)
+
+[node name="Root" type="CenterContainer" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="Root"]
+custom_minimum_size = Vector2(640, 440)
+theme_override_styles/panel = SubResource("1")
+
+[node name="Margin" type="MarginContainer" parent="Root/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="VBox" type="VBoxContainer" parent="Root/Panel/Margin"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Settings"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 22
+
+[node name="GraphicsTitle" type="Label" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Graphics"
+theme_override_font_sizes/font_size = 16
+
+[node name="FullscreenToggle" type="CheckBox" parent="Root/Panel/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Fullscreen"
+
+[node name="AudioTitle" type="Label" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Audio"
+theme_override_font_sizes/font_size = 16
+
+[node name="MasterRow" type="HBoxContainer" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="MasterLabel" type="Label" parent="Root/Panel/Margin/VBox/MasterRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 0)
+text = "Master"
+
+[node name="MasterSlider" type="HSlider" parent="Root/Panel/Margin/VBox/MasterRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.0
+max_value = 1.0
+step = 0.01
+
+[node name="MusicRow" type="HBoxContainer" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="MusicLabel" type="Label" parent="Root/Panel/Margin/VBox/MusicRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 0)
+text = "Music"
+
+[node name="MusicSlider" type="HSlider" parent="Root/Panel/Margin/VBox/MusicRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.0
+max_value = 1.0
+step = 0.01
+
+[node name="SfxRow" type="HBoxContainer" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="SfxLabel" type="Label" parent="Root/Panel/Margin/VBox/SfxRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 0)
+text = "SFX"
+
+[node name="SfxSlider" type="HSlider" parent="Root/Panel/Margin/VBox/SfxRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.0
+max_value = 1.0
+step = 0.01
+
+[node name="Spacer" type="Control" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 6)
+
+[node name="ButtonsRow" type="HBoxContainer" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="ResetButton" type="Button" parent="Root/Panel/Margin/VBox/ButtonsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Reset to Defaults"
+size_flags_horizontal = 3
+
+[node name="CloseButton" type="Button" parent="Root/Panel/Margin/VBox/ButtonsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Close"
+custom_minimum_size = Vector2(140, 0)
+
