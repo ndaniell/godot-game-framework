@@ -11,6 +11,12 @@ const _DEFAULT_TOGGLE_KEY := KEY_F3
 
 @export var toggle_key: Key = _DEFAULT_TOGGLE_KEY
 
+var _expanded := false
+var _fps_enabled := true
+var _syncing_ui := false
+var _sample_timer: Timer = null
+var _fps_metric_checkbox: CheckBox = null
+
 @onready var _panel: PanelContainer = $Panel
 @onready var _fps_toggle: CheckButton = $Panel/Margin/VBox/FpsRow/FpsToggle
 @onready var _fps_value: Label = $Panel/Margin/VBox/FpsRow/FpsValue
@@ -20,12 +26,6 @@ const _DEFAULT_TOGGLE_KEY := KEY_F3
 @onready var _extras: Control = $Panel/Margin/VBox/Extras
 @onready var _window_option: OptionButton = $Panel/Margin/VBox/Extras/GraphControls/WindowOption
 @onready var _metrics_list: VBoxContainer = $Panel/Margin/VBox/Extras/MetricsList
-
-var _expanded := false
-var _fps_enabled := true
-var _syncing_ui := false
-var _sample_timer: Timer = null
-var _fps_metric_checkbox: CheckBox = null
 
 
 func _ready() -> void:
@@ -173,4 +173,3 @@ func _get_graph_sample_interval() -> float:
 		if val is float:
 			return max(0.01, val)
 	return 0.2
-

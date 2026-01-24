@@ -5,6 +5,9 @@
 
 disable: []
 
+# UI managers expose a broad API surface; allow larger public method counts.
+max-public-methods: 60
+
 # Allow both `GameStateDefinition` and `GGF_LogManager`-style class names.
 class-name: (GGF_)?([A-Z][a-z0-9]*)+
 

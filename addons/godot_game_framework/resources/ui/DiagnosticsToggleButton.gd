@@ -40,4 +40,3 @@ func _on_pressed() -> void:
 	else:
 		if ui.has_method("show_ui_element"):
 			ui.call("show_ui_element", diagnostics_element_name, fade)
-

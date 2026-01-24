@@ -10,13 +10,6 @@ signal notification_shown(notification_id: String, data: Dictionary)
 signal notification_hidden(notification_id: String)
 signal notification_clicked(notification_id: String)
 
-const _OVERRIDE_UI_CONFIG_PATH := "res://ggf_ui_config.tres"
-const _DEFAULT_UI_CONFIG_PATH := "res://addons/godot_game_framework/resources/ui/ggf_ui_config_default.tres"
-const _DEFAULT_NOTIFICATION_TOAST_SCENE_PATH := "res://addons/godot_game_framework/resources/ui/NotificationToast.tscn"
-const _DEFAULT_NOTIFICATION_CONTAINER_SCENE_PATH := (
-	"res://addons/godot_game_framework/resources/ui/NotificationContainer.tscn"
-)
-
 # Notification types
 enum NotificationType {
 	INFO,
@@ -25,6 +18,17 @@ enum NotificationType {
 	ERROR,
 	CUSTOM,
 }
+
+const _OVERRIDE_UI_CONFIG_PATH := "res://ggf_ui_config.tres"
+const _DEFAULT_UI_CONFIG_PATH := (
+	"res://addons/godot_game_framework/resources/ui/ggf_ui_config_default.tres"
+)
+const _DEFAULT_NOTIFICATION_TOAST_SCENE_PATH := (
+	"res://addons/godot_game_framework/resources/ui/NotificationToast.tscn"
+)
+const _DEFAULT_NOTIFICATION_CONTAINER_SCENE_PATH := (
+	"res://addons/godot_game_framework/resources/ui/NotificationContainer.tscn"
+)
 
 # Notification configuration
 @export_group("Notification Configuration")
@@ -217,9 +221,13 @@ func _create_notification_node(
 ) -> Control:
 	var toast_scene := _get_notification_toast_scene()
 	if toast_scene == null:
-		GGF.log().error(
-			"NotificationManager",
-			"Cannot create notification toast: no toast scene configured and default missing",
+		(
+			GGF
+			. log()
+			. error(
+				"NotificationManager",
+				"Cannot create notification toast: no toast scene configured and default missing",
+			)
 		)
 		return null
 
@@ -227,9 +235,13 @@ func _create_notification_node(
 	if not (inst is Control):
 		if inst != null:
 			inst.queue_free()
-		GGF.log().error(
-			"NotificationManager",
-			"Notification toast scene must instance a Control",
+		(
+			GGF
+			. log()
+			. error(
+				"NotificationManager",
+				"Notification toast scene must instance a Control",
+			)
 		)
 		return null
 
@@ -526,9 +538,13 @@ func _configure_notification_container(container: Control) -> void:
 func _create_default_container() -> Control:
 	var container_scene := _get_notification_container_scene()
 	if container_scene == null:
-		GGF.log().error(
-			"NotificationManager",
-			"Cannot create notification container: no container scene configured and default missing",
+		(
+			GGF
+			. log()
+			. error(
+				"NotificationManager",
+				"Cannot create notification container: no container scene configured and default missing",
+			)
 		)
 		return null
 
@@ -536,9 +552,13 @@ func _create_default_container() -> Control:
 	if not (inst is Control):
 		if inst != null:
 			inst.queue_free()
-		GGF.log().error(
-			"NotificationManager",
-			"Notification container scene must instance a Control",
+		(
+			GGF
+			. log()
+			. error(
+				"NotificationManager",
+				"Notification container scene must instance a Control",
+			)
 		)
 		return null
 

@@ -14,6 +14,7 @@ signal time_window_changed(seconds: float)
 @export var padding: Vector2 = Vector2(8, 8)
 @export var grid_lines: int = 4
 
+
 class Series:
 	var color: Color
 	var enabled: bool = true
@@ -174,11 +175,7 @@ func _draw_grid(graph_rect: Rect2) -> void:
 
 
 func _draw_series(
-	series: Series,
-	graph_rect: Rect2,
-	min_val: float,
-	value_range: float,
-	max_samples: int
+	series: Series, graph_rect: Rect2, min_val: float, value_range: float, max_samples: int
 ) -> void:
 	if series == null:
 		return
@@ -197,8 +194,7 @@ func _draw_series(
 	for i in range(samples.size()):
 		var x: float = start_x + step_x * float(i)
 		var norm: float = (samples[i] - min_val) / value_range
-		var y: float = graph_rect.position.y \
-			+ graph_rect.size.y * (1.0 - clamp(norm, 0.0, 1.0))
+		var y: float = graph_rect.position.y + graph_rect.size.y * (1.0 - clamp(norm, 0.0, 1.0))
 		var p: Vector2 = Vector2(x, y)
 
 		if has_last:
@@ -235,4 +231,3 @@ func _trim_series_to_max_samples(series_name: String) -> void:
 		return
 	while s.samples.size() > max_samples:
 		s.samples.remove_at(0)
-

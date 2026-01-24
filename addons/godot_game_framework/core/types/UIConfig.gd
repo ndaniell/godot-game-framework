@@ -23,4 +23,3 @@ class_name GGF_UIConfig extends Resource
 ## - kind: String ("element" | "menu" | "dialog") (optional)
 ## - visible: bool (optional, default false)
 @export var pre_registered: Array[Dictionary] = []
-

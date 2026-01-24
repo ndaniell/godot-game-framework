@@ -16,7 +16,9 @@ signal focus_changed(old_element: Control, new_element: Control)
 signal ui_ready
 
 const _OVERRIDE_UI_CONFIG_PATH := "res://ggf_ui_config.tres"
-const _DEFAULT_UI_CONFIG_PATH := "res://addons/godot_game_framework/resources/ui/ggf_ui_config_default.tres"
+const _DEFAULT_UI_CONFIG_PATH := (
+	"res://addons/godot_game_framework/resources/ui/ggf_ui_config_default.tres"
+)
 const _DEFAULT_UI_ROOT_SCENE_PATH := "res://addons/godot_game_framework/resources/ui/UIRoot.tscn"
 
 # UI layers
@@ -94,9 +96,13 @@ func _load_and_apply_ui_config() -> void:
 		if not _instantiate_ui_root(ui_root_scene):
 			GGF.log().error("UIManager", "Failed to instance UI root scene")
 	else:
-		GGF.log().error(
-			"UIManager",
-			"Cannot load UI root scene: no config and default scene missing",
+		(
+			GGF
+			. log()
+			. error(
+				"UIManager",
+				"Cannot load UI root scene: no config and default scene missing",
+			)
 		)
 
 	if _ui_config != null:

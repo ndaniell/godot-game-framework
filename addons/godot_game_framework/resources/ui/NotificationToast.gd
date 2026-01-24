@@ -36,4 +36,3 @@ func set_notification_type(_type: int) -> void:
 
 func set_notification_data(_data: Dictionary) -> void:
 	pass
-

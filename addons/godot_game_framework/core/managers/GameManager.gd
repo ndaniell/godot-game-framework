@@ -317,12 +317,14 @@ func _apply_state_ui_properties(props: Dictionary) -> void:
 	var hide_element_val: Variant = ui_props.get("hide_ui_element", "")
 	var hide_element: String = hide_element_val if hide_element_val is String else ""
 
-	var has_ui_actions := close_menus \
-		or close_dialogs \
-		or not open_menu.is_empty() \
-		or not open_dialog.is_empty() \
-		or not show_element.is_empty() \
+	var has_ui_actions := (
+		close_menus
+		or close_dialogs
+		or not open_menu.is_empty()
+		or not open_dialog.is_empty()
+		or not show_element.is_empty()
 		or not hide_element.is_empty()
+	)
 
 	if not has_ui_actions:
 		return
