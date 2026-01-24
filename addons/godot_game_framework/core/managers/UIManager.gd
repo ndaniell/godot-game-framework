@@ -16,9 +16,8 @@ signal focus_changed(old_element: Control, new_element: Control)
 signal ui_ready
 
 const _OVERRIDE_UI_CONFIG_PATH := "res://ggf_ui_config.tres"
-const _DEFAULT_UI_CONFIG_PATH := (
-	"res://addons/godot_game_framework/resources/ui/ggf_ui_config_default.tres"
-)
+const _DEFAULT_UI_RESOURCES_PATH := "res://addons/godot_game_framework/resources/ui/"
+const _DEFAULT_UI_CONFIG_PATH := _DEFAULT_UI_RESOURCES_PATH + "ggf_ui_config_default.tres"
 const _DEFAULT_UI_ROOT_SCENE_PATH := "res://addons/godot_game_framework/resources/ui/UIRoot.tscn"
 
 # UI layers

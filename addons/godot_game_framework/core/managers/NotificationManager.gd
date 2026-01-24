@@ -20,14 +20,13 @@ enum NotificationType {
 }
 
 const _OVERRIDE_UI_CONFIG_PATH := "res://ggf_ui_config.tres"
-const _DEFAULT_UI_CONFIG_PATH := (
-	"res://addons/godot_game_framework/resources/ui/ggf_ui_config_default.tres"
-)
+const _DEFAULT_UI_RESOURCES_PATH := "res://addons/godot_game_framework/resources/ui/"
+const _DEFAULT_UI_CONFIG_PATH := _DEFAULT_UI_RESOURCES_PATH + "ggf_ui_config_default.tres"
 const _DEFAULT_NOTIFICATION_TOAST_SCENE_PATH := (
-	"res://addons/godot_game_framework/resources/ui/NotificationToast.tscn"
+	_DEFAULT_UI_RESOURCES_PATH + "NotificationToast.tscn"
 )
 const _DEFAULT_NOTIFICATION_CONTAINER_SCENE_PATH := (
-	"res://addons/godot_game_framework/resources/ui/NotificationContainer.tscn"
+	_DEFAULT_UI_RESOURCES_PATH + "NotificationContainer.tscn"
 )
 
 # Notification configuration
