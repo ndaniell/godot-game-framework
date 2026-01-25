@@ -42,12 +42,18 @@ func _ready() -> void:
 	GGF.log().info("NetworkManager", "NetworkManager ready")
 
 
+func _is_offline_peer(peer: MultiplayerPeer) -> bool:
+	# Godot's SceneMultiplayer defaults to an OfflineMultiplayerPeer (always "connected").
+	# Treat this as offline for user-facing state and tests.
+	return peer == null or peer is OfflineMultiplayerPeer
+
+
 func is_network_connected() -> bool:
-	return multiplayer.multiplayer_peer != null
+	return not _is_offline_peer(multiplayer.multiplayer_peer)
 
 
 func is_host() -> bool:
-	return multiplayer.multiplayer_peer != null and multiplayer.is_server()
+	return not _is_offline_peer(multiplayer.multiplayer_peer) and multiplayer.is_server()
 
 
 ## Best-effort server peer-id lookup.
@@ -131,8 +137,6 @@ func join(ip: String, port: int = -1) -> bool:
 
 
 func disconnect_from_game() -> void:
-	# Godot's SceneMultiplayer defaults to an OfflineMultiplayerPeer (always "connected").
-	# Treat this as offline so we don't show a confusing "Disconnected" toast on first host/join.
 	if (
 		multiplayer.multiplayer_peer == null
 		or multiplayer.multiplayer_peer is OfflineMultiplayerPeer
@@ -253,6 +257,7 @@ func _notify_error(msg: String) -> void:
 func _update_logging_context() -> void:
 	var logger := GGF.log()
 	if logger and logger.has_method("update_network_context"):
-		var peer_id := multiplayer.get_unique_id() if multiplayer.multiplayer_peer else 0
-		var is_server := multiplayer.is_server() if multiplayer.multiplayer_peer else false
+		var peer := multiplayer.multiplayer_peer
+		var peer_id := multiplayer.get_unique_id() if not _is_offline_peer(peer) else 0
+		var is_server := multiplayer.is_server() if not _is_offline_peer(peer) else false
 		logger.update_network_context(peer_id, is_server)
