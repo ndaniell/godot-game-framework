@@ -131,7 +131,12 @@ func join(ip: String, port: int = -1) -> bool:
 
 
 func disconnect_from_game() -> void:
-	if multiplayer.multiplayer_peer == null:
+	# Godot's SceneMultiplayer defaults to an OfflineMultiplayerPeer (always "connected").
+	# Treat this as offline so we don't show a confusing "Disconnected" toast on first host/join.
+	if (
+		multiplayer.multiplayer_peer == null
+		or multiplayer.multiplayer_peer is OfflineMultiplayerPeer
+	):
 		GGF.log().debug("NetworkManager", "Disconnect called but already offline")
 		return
 

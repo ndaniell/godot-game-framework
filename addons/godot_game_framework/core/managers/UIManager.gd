@@ -72,6 +72,7 @@ func _ensure_root_container() -> void:
 	_root_container = Control.new()
 	_root_container.name = "Root"
 	_root_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_root_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_root_container)
 
 
