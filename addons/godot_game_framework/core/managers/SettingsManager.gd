@@ -5,6 +5,26 @@ extends Node
 ##
 ## This manager handles game settings including graphics, audio, and gameplay settings.
 ## Extend this class to add custom settings functionality.
+##
+## ## Using SettingsConfig for Default Settings
+##
+## You can define default settings using a SettingsConfig resource:
+##
+## 1. Create a new SettingsConfig resource in your project root:
+##    - Right-click in FileSystem → Create New → Resource
+##    - Search for "GGF_SettingsConfig"
+##    - Save it as `res://ggf_settings_config.tres`
+##
+## 2. Configure your desired defaults in the Inspector
+##
+## 3. The SettingsManager will automatically load it on startup
+##
+## Alternatively, assign a config to the `default_settings_config` export property.
+##
+## **Load Priority:**
+## 1. Project override: `res://ggf_settings_config.tres`
+## 2. Assigned `default_settings_config` export
+## 3. Framework defaults (hardcoded)
 
 signal setting_changed(category: String, key: String, value: Variant)
 signal graphics_settings_changed(settings: Dictionary)
@@ -17,6 +37,7 @@ signal settings_saved
 @export_group("Settings Configuration")
 @export var settings_file_path: String = "user://settings.save"
 @export var auto_save: bool = true
+@export var default_settings_config: GGF_SettingsConfig
 
 # Graphics settings
 @export_group("Graphics Settings")
@@ -46,6 +67,54 @@ signal settings_saved
 		DisplayServer.window_set_mode(value)
 		_setting_changed("graphics", "window_mode", value)
 
+@export var msaa_3d: Viewport.MSAA = Viewport.MSAA_DISABLED:
+	set(value):
+		msaa_3d = value
+		if is_inside_tree():
+			var viewport := get_viewport()
+			if viewport:
+				viewport.msaa_3d = value
+		_setting_changed("graphics", "msaa_3d", value)
+
+@export var screen_space_aa: Viewport.ScreenSpaceAA = Viewport.SCREEN_SPACE_AA_DISABLED:
+	set(value):
+		screen_space_aa = value
+		if is_inside_tree():
+			var viewport := get_viewport()
+			if viewport:
+				viewport.screen_space_aa = value
+		_setting_changed("graphics", "screen_space_aa", value)
+
+@export var taa_enabled: bool = false:
+	set(value):
+		taa_enabled = value
+		if is_inside_tree():
+			var viewport := get_viewport()
+			if viewport:
+				viewport.use_taa = value
+		_setting_changed("graphics", "taa_enabled", value)
+
+@export var max_fps: int = 0:
+	set(value):
+		max_fps = value
+		Engine.max_fps = value
+		_setting_changed("graphics", "max_fps", value)
+
+@export var borderless: bool = false:
+	set(value):
+		borderless = value
+		DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS, value)
+		_setting_changed("graphics", "borderless", value)
+
+@export_range(0.5, 2.0, 0.05) var render_scale: float = 1.0:
+	set(value):
+		render_scale = clamp(value, 0.5, 2.0)
+		if is_inside_tree():
+			var viewport := get_viewport()
+			if viewport:
+				viewport.scaling_3d_scale = render_scale
+		_setting_changed("graphics", "render_scale", value)
+
 # Audio settings (references AudioManager)
 @export_group("Audio Settings")
 @export_range(0.0, 1.0) var master_volume: float = 1.0:
@@ -65,6 +134,23 @@ signal settings_saved
 		sfx_volume = value
 		_apply_audio_volume_to_manager("sfx_volume", value)
 		_setting_changed("audio", "sfx_volume", value)
+
+@export_range(0.0, 1.0) var ui_volume: float = 1.0:
+	set(value):
+		ui_volume = value
+		_apply_audio_volume_to_manager("ui_volume", value)
+		_setting_changed("audio", "ui_volume", value)
+
+@export_range(0.0, 1.0) var voice_volume: float = 1.0:
+	set(value):
+		voice_volume = value
+		_apply_audio_volume_to_manager("voice_volume", value)
+		_setting_changed("audio", "voice_volume", value)
+
+@export var mute_when_unfocused: bool = false:
+	set(value):
+		mute_when_unfocused = value
+		_setting_changed("audio", "mute_when_unfocused", value)
 
 # Gameplay settings
 @export_group("Gameplay Settings")
@@ -97,27 +183,116 @@ func _ready() -> void:
 	GGF.log().info("SettingsManager", "SettingsManager ready")
 
 
+## Handle window notifications for focus changes
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		_on_window_focus_changed(false)
+	elif what == NOTIFICATION_APPLICATION_FOCUS_IN:
+		_on_window_focus_changed(true)
+
+
+## Handle window focus changes for mute_when_unfocused
+func _on_window_focus_changed(focused: bool) -> void:
+	if not mute_when_unfocused:
+		return
+
+	var audio_manager := GGF.get_manager(&"AudioManager")
+	if not audio_manager or not audio_manager.is_inside_tree():
+		return
+
+	# Mute/unmute master bus when focus changes
+	var master_bus_idx := AudioServer.get_bus_index("Master")
+	if master_bus_idx >= 0:
+		AudioServer.set_bus_mute(master_bus_idx, not focused)
+
+
 ## Initialize settings
 ## Override this method to customize initialization
 func _initialize_settings() -> void:
+	# Load defaults from config if available
+	_load_defaults_from_config()
+
 	# Initialize default settings
 	_settings["graphics"] = {
 		"fullscreen": fullscreen,
 		"vsync_mode": vsync_mode,
 		"resolution": resolution,
 		"window_mode": window_mode,
+		"msaa_3d": msaa_3d,
+		"screen_space_aa": screen_space_aa,
+		"taa_enabled": taa_enabled,
+		"max_fps": max_fps,
+		"borderless": borderless,
+		"render_scale": render_scale,
 	}
 
 	_settings["audio"] = {
 		"master_volume": master_volume,
 		"music_volume": music_volume,
 		"sfx_volume": sfx_volume,
+		"ui_volume": ui_volume,
+		"voice_volume": voice_volume,
+		"mute_when_unfocused": mute_when_unfocused,
 	}
 
 	_settings["gameplay"] = {
 		"difficulty": difficulty,
 		"language": language,
 	}
+
+
+## Load defaults from SettingsConfig resource
+## Checks for project override first, then uses assigned config, then falls back to code defaults
+func _load_defaults_from_config() -> void:
+	var config: GGF_SettingsConfig = null
+
+	# Try to load project override config
+	const PROJECT_CONFIG_PATH := "res://ggf_settings_config.tres"
+	if ResourceLoader.exists(PROJECT_CONFIG_PATH):
+		config = load(PROJECT_CONFIG_PATH) as GGF_SettingsConfig
+		if config:
+			GGF.log().info(
+				"SettingsManager", "Loaded project settings config from: " + PROJECT_CONFIG_PATH
+			)
+
+	# Fall back to assigned config
+	if not config and default_settings_config:
+		config = default_settings_config
+		GGF.log().debug("SettingsManager", "Using assigned default settings config")
+
+	# Apply config defaults if we have one
+	if config:
+		_apply_config_defaults(config)
+
+
+## Apply defaults from a SettingsConfig resource
+func _apply_config_defaults(config: GGF_SettingsConfig) -> void:
+	if not config:
+		return
+
+	# Graphics defaults
+	fullscreen = config.fullscreen
+	vsync_mode = config.vsync_mode
+	resolution = config.resolution
+	window_mode = config.window_mode
+	msaa_3d = config.msaa_3d
+	screen_space_aa = config.screen_space_aa
+	taa_enabled = config.taa_enabled
+	max_fps = config.max_fps
+	borderless = config.borderless
+	render_scale = config.render_scale
+
+	# Audio defaults
+	master_volume = config.master_volume
+	music_volume = config.music_volume
+	sfx_volume = config.sfx_volume
+	ui_volume = config.ui_volume
+	voice_volume = config.voice_volume
+	mute_when_unfocused = config.mute_when_unfocused
+
+	# Gameplay defaults
+	difficulty = config.difficulty
+	language = config.language
 
 
 ## Load settings from file
@@ -200,6 +375,22 @@ func _apply_settings() -> void:
 				resolution = res_value
 		if graphics.has("window_mode"):
 			window_mode = graphics["window_mode"]
+		if graphics.has("msaa_3d"):
+			var msaa_val = graphics["msaa_3d"]
+			# Cast int from JSON to enum
+			msaa_3d = msaa_val as Viewport.MSAA if msaa_val is int else msaa_val
+		if graphics.has("screen_space_aa"):
+			var ssaa_val = graphics["screen_space_aa"]
+			# Cast int from JSON to enum
+			screen_space_aa = ssaa_val as Viewport.ScreenSpaceAA if ssaa_val is int else ssaa_val
+		if graphics.has("taa_enabled"):
+			taa_enabled = graphics["taa_enabled"]
+		if graphics.has("max_fps"):
+			max_fps = graphics["max_fps"]
+		if graphics.has("borderless"):
+			borderless = graphics["borderless"]
+		if graphics.has("render_scale"):
+			render_scale = graphics["render_scale"]
 
 	# Apply audio settings
 	if _settings.has("audio"):
@@ -210,6 +401,12 @@ func _apply_settings() -> void:
 			music_volume = audio["music_volume"]
 		if audio.has("sfx_volume"):
 			sfx_volume = audio["sfx_volume"]
+		if audio.has("ui_volume"):
+			ui_volume = audio["ui_volume"]
+		if audio.has("voice_volume"):
+			voice_volume = audio["voice_volume"]
+		if audio.has("mute_when_unfocused"):
+			mute_when_unfocused = audio["mute_when_unfocused"]
 
 	# Apply gameplay settings
 	if _settings.has("gameplay"):
@@ -231,12 +428,21 @@ func _update_settings_dict() -> void:
 		"vsync_mode": vsync_mode,
 		"resolution": resolution,
 		"window_mode": window_mode,
+		"msaa_3d": msaa_3d,
+		"screen_space_aa": screen_space_aa,
+		"taa_enabled": taa_enabled,
+		"max_fps": max_fps,
+		"borderless": borderless,
+		"render_scale": render_scale,
 	}
 
 	_settings["audio"] = {
 		"master_volume": master_volume,
 		"music_volume": music_volume,
 		"sfx_volume": sfx_volume,
+		"ui_volume": ui_volume,
+		"voice_volume": voice_volume,
+		"mute_when_unfocused": mute_when_unfocused,
 	}
 
 	_settings["gameplay"] = {
@@ -258,18 +464,23 @@ func set_setting(category: String, key: String, value: Variant) -> void:
 	)
 
 	# Apply setting if it's a known category
+	# Note: _apply_*_setting() methods will trigger property setters,
+	# which call _setting_changed() and auto-save.
+	var setting_applied := false
 	match category:
 		"graphics":
 			_apply_graphics_setting(key, value)
+			setting_applied = true
 		"audio":
 			_apply_audio_setting(key, value)
+			setting_applied = true
 		"gameplay":
 			_apply_gameplay_setting(key, value)
+			setting_applied = true
 
-	_setting_changed(category, key, value)
-
-	if auto_save:
-		save_settings()
+	# For custom categories or unknown settings, manually trigger change notification
+	if not setting_applied:
+		_setting_changed(category, key, value)
 
 
 ## Get a setting value
@@ -296,6 +507,18 @@ func _apply_graphics_setting(key: String, value: Variant) -> void:
 			resolution = value
 		"window_mode":
 			window_mode = value
+		"msaa_3d":
+			msaa_3d = value
+		"screen_space_aa":
+			screen_space_aa = value
+		"taa_enabled":
+			taa_enabled = value
+		"max_fps":
+			max_fps = value
+		"borderless":
+			borderless = value
+		"render_scale":
+			render_scale = value
 
 
 ## Apply an audio setting
@@ -308,6 +531,12 @@ func _apply_audio_setting(key: String, value: Variant) -> void:
 			music_volume = value
 		"sfx_volume":
 			sfx_volume = value
+		"ui_volume":
+			ui_volume = value
+		"voice_volume":
+			voice_volume = value
+		"mute_when_unfocused":
+			mute_when_unfocused = value
 
 
 ## Apply audio volume to AudioManager (with safety check)
@@ -324,6 +553,10 @@ func _apply_audio_volume_to_manager(setting_key: String, value: float) -> void:
 			audio_manager.set_music_volume(value)
 		"sfx_volume":
 			audio_manager.set_sfx_volume(value)
+		"ui_volume":
+			audio_manager.set_ui_volume(value)
+		"voice_volume":
+			audio_manager.set_voice_volume(value)
 
 
 ## Apply a gameplay setting
@@ -383,6 +616,10 @@ func _setting_changed(category: String, key: String, value: Variant) -> void:
 			)
 		)
 	_on_setting_changed(category, key, value)
+
+	# Auto-save if enabled
+	if auto_save:
+		save_settings()
 
 
 ## Virtual methods - Override these in extended classes

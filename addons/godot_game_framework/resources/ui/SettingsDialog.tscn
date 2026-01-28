@@ -48,7 +48,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Panel" type="PanelContainer" parent="Root"]
-custom_minimum_size = Vector2(640, 440)
+custom_minimum_size = Vector2(640, 580)
 theme_override_styles/panel = SubResource("1")
 
 [node name="Margin" type="MarginContainer" parent="Root/Panel"]
@@ -79,6 +79,104 @@ theme_override_font_sizes/font_size = 16
 unique_name_in_owner = true
 layout_mode = 2
 text = "Fullscreen"
+
+[node name="VsyncRow" type="HBoxContainer" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="VsyncLabel" type="Label" parent="Root/Panel/Margin/VBox/VsyncRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 0)
+text = "V-Sync"
+
+[node name="VsyncDropdown" type="OptionButton" parent="Root/Panel/Margin/VBox/VsyncRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Msaa3dRow" type="HBoxContainer" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Msaa3dLabel" type="Label" parent="Root/Panel/Margin/VBox/Msaa3dRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 0)
+text = "MSAA 3D"
+
+[node name="Msaa3dDropdown" type="OptionButton" parent="Root/Panel/Margin/VBox/Msaa3dRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ScreenSpaceAaRow" type="HBoxContainer" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="ScreenSpaceAaLabel" type="Label" parent="Root/Panel/Margin/VBox/ScreenSpaceAaRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 0)
+text = "Screen-Space AA"
+
+[node name="ScreenSpaceAaDropdown" type="OptionButton" parent="Root/Panel/Margin/VBox/ScreenSpaceAaRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="TaaToggle" type="CheckBox" parent="Root/Panel/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "TAA (Temporal Anti-Aliasing)"
+
+[node name="WindowModeRow" type="HBoxContainer" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="WindowModeLabel" type="Label" parent="Root/Panel/Margin/VBox/WindowModeRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 0)
+text = "Window Mode"
+
+[node name="WindowModeDropdown" type="OptionButton" parent="Root/Panel/Margin/VBox/WindowModeRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="BorderlessToggle" type="CheckBox" parent="Root/Panel/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Borderless Window"
+
+[node name="MaxFpsRow" type="HBoxContainer" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="MaxFpsLabel" type="Label" parent="Root/Panel/Margin/VBox/MaxFpsRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 0)
+text = "Max FPS"
+
+[node name="MaxFpsDropdown" type="OptionButton" parent="Root/Panel/Margin/VBox/MaxFpsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="RenderScaleRow" type="HBoxContainer" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="RenderScaleLabel" type="Label" parent="Root/Panel/Margin/VBox/RenderScaleRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 0)
+text = "Render Scale"
+
+[node name="RenderScaleSlider" type="HSlider" parent="Root/Panel/Margin/VBox/RenderScaleRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.5
+max_value = 2.0
+step = 0.05
+value = 1.0
 
 [node name="AudioTitle" type="Label" parent="Root/Panel/Margin/VBox"]
 layout_mode = 2
@@ -135,6 +233,45 @@ size_flags_horizontal = 3
 min_value = 0.0
 max_value = 1.0
 step = 0.01
+
+[node name="UiRow" type="HBoxContainer" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="UiLabel" type="Label" parent="Root/Panel/Margin/VBox/UiRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 0)
+text = "UI"
+
+[node name="UiSlider" type="HSlider" parent="Root/Panel/Margin/VBox/UiRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.0
+max_value = 1.0
+step = 0.01
+
+[node name="VoiceRow" type="HBoxContainer" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="VoiceLabel" type="Label" parent="Root/Panel/Margin/VBox/VoiceRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 0)
+text = "Voice"
+
+[node name="VoiceSlider" type="HSlider" parent="Root/Panel/Margin/VBox/VoiceRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.0
+max_value = 1.0
+step = 0.01
+
+[node name="MuteUnfocusedToggle" type="CheckBox" parent="Root/Panel/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Mute When Unfocused"
 
 [node name="Spacer" type="Control" parent="Root/Panel/Margin/VBox"]
 layout_mode = 2

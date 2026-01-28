@@ -14,6 +14,8 @@ signal volume_changed(bus_name: String, volume: float)
 @export_group("Audio Buses")
 @export var music_bus_name: String = "Music"
 @export var sfx_bus_name: String = "SFX"
+@export var ui_bus_name: String = "UI"
+@export var voice_bus_name: String = "Voice"
 @export var master_bus_name: String = "Master"
 
 # Volume settings (0.0 to 1.0)
@@ -35,6 +37,18 @@ signal volume_changed(bus_name: String, volume: float)
 		sfx_volume = clamp(value, 0.0, 1.0)
 		_set_bus_volume(sfx_bus_name, sfx_volume)
 		volume_changed.emit(sfx_bus_name, sfx_volume)
+
+@export_range(0.0, 1.0) var ui_volume: float = 1.0:
+	set(value):
+		ui_volume = clamp(value, 0.0, 1.0)
+		_set_bus_volume(ui_bus_name, ui_volume)
+		volume_changed.emit(ui_bus_name, ui_volume)
+
+@export_range(0.0, 1.0) var voice_volume: float = 1.0:
+	set(value):
+		voice_volume = clamp(value, 0.0, 1.0)
+		_set_bus_volume(voice_bus_name, voice_volume)
+		volume_changed.emit(voice_bus_name, voice_volume)
 
 # Current music player
 var _music_player: AudioStreamPlayer
@@ -64,6 +78,14 @@ func _initialize_audio_buses() -> void:
 		AudioServer.add_bus(2)
 		AudioServer.set_bus_name(2, sfx_bus_name)
 
+	if not AudioServer.get_bus_index(ui_bus_name) >= 0:
+		AudioServer.add_bus(3)
+		AudioServer.set_bus_name(3, ui_bus_name)
+
+	if not AudioServer.get_bus_index(voice_bus_name) >= 0:
+		AudioServer.add_bus(4)
+		AudioServer.set_bus_name(4, voice_bus_name)
+
 
 ## Initialize the music player
 ## Override this method to customize music player setup
@@ -91,6 +113,8 @@ func _apply_volume_settings() -> void:
 	_set_bus_volume(master_bus_name, master_volume)
 	_set_bus_volume(music_bus_name, music_volume)
 	_set_bus_volume(sfx_bus_name, sfx_volume)
+	_set_bus_volume(ui_bus_name, ui_volume)
+	_set_bus_volume(voice_bus_name, voice_volume)
 
 
 ## Set volume for a specific bus
@@ -226,6 +250,10 @@ func _on_setting_changed_event(data: Dictionary) -> void:
 				set_music_volume(volume)
 			"sfx_volume":
 				set_sfx_volume(volume)
+			"ui_volume":
+				set_ui_volume(volume)
+			"voice_volume":
+				set_voice_volume(volume)
 
 
 ## Get current music stream
@@ -251,6 +279,16 @@ func set_music_volume(volume: float) -> void:
 ## Set SFX volume (0.0 to 1.0)
 func set_sfx_volume(volume: float) -> void:
 	sfx_volume = volume
+
+
+## Set UI volume (0.0 to 1.0)
+func set_ui_volume(volume: float) -> void:
+	ui_volume = volume
+
+
+## Set Voice volume (0.0 to 1.0)
+func set_voice_volume(volume: float) -> void:
+	voice_volume = volume
 
 
 ## Connect to EventManager for cross-manager communication

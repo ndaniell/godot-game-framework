@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="GGF_SettingsConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://addons/godot_game_framework/core/types/SettingsConfig.gd" id="1_config"]
+
+[resource]
+script = ExtResource("1_config")
+fullscreen = false
+vsync_mode = 1
+resolution = Vector2i(1920, 1080)
+window_mode = 0
+msaa_3d = 0
+screen_space_aa = 0
+taa_enabled = false
+max_fps = 0
+borderless = false
+render_scale = 1.0
+master_volume = 1.0
+music_volume = 1.0
+sfx_volume = 1.0
+ui_volume = 1.0
+voice_volume = 1.0
+mute_when_unfocused = false
+difficulty = "normal"
+language = "en"

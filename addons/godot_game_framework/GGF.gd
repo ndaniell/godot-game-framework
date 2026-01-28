@@ -15,6 +15,7 @@ const _TYPE_SCRIPTS: Array[String] = [
 	"res://addons/godot_game_framework/core/types/GameStateDefinition.gd",
 	"res://addons/godot_game_framework/core/types/GameStateMachineConfig.gd",
 	"res://addons/godot_game_framework/core/types/UIConfig.gd",
+	"res://addons/godot_game_framework/core/types/SettingsConfig.gd",
 ]
 
 var _managers: Dictionary = {}  # StringName -> Node
