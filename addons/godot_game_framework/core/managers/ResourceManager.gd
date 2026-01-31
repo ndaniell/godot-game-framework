@@ -1,5 +1,5 @@
 class_name GGF_ResourceManager
-extends Node
+extends "res://addons/godot_game_framework/core/managers/BaseManager.gd"
 
 ## ResourceManager - Extensible resource management system for the Godot Game Framework
 ##
@@ -36,6 +36,7 @@ func _ready() -> void:
 	_initialize_resource_manager()
 	_on_resource_manager_ready()
 	GGF.log().info("ResourceManager", "ResourceManager ready")
+	_set_manager_ready()  # Mark manager as ready
 
 
 ## Initialize resource manager

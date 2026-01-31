@@ -1,5 +1,5 @@
 class_name GGF_SceneManager
-extends Node
+extends "res://addons/godot_game_framework/core/managers/BaseManager.gd"
 
 ## SceneManager - Extensible scene management system for the Godot Game Framework
 ##
@@ -30,6 +30,7 @@ var _transition_in_progress: bool = false
 func _ready() -> void:
 	_initialize_scene_manager()
 	_on_scene_manager_ready()
+	_set_manager_ready()  # Mark manager as ready
 
 
 ## Initialize scene manager
@@ -148,7 +149,16 @@ func change_scene(scene_path: String, transition_type: String = "") -> void:
 	if transition_type != "":
 		await _perform_transition(from_scene, scene_path, transition_type)
 	else:
+		# `change_scene_to_file()` may internally remove/add children. If we're called
+		# during `_ready()`/tree mutations, Godot can throw:
+		# "Parent node is busy adding/removing children".
+		# Deferring by one frame avoids that.
+		await get_tree().process_frame
 		get_tree().change_scene_to_file(scene_path)
+		# `change_scene_to_file()` completes on the next frame(s). Yield once so
+		# callers observing `_transition_in_progress` / `_current_scene_path` don't
+		# see stale state while the scene swap is still in flight.
+		await get_tree().process_frame
 
 	_current_scene_path = scene_path
 	_transition_in_progress = false
@@ -277,46 +287,126 @@ func _perform_transition(from_scene: String, to_scene: String, transition_type: 
 		"slide":
 			await _slide_transition(from_scene, to_scene)
 		"instant":
+			await get_tree().process_frame
 			get_tree().change_scene_to_file(to_scene)
 		_:
 			# Default: instant transition
+			await get_tree().process_frame
 			get_tree().change_scene_to_file(to_scene)
 
 
 ## Fade transition
 ## Override this method to customize fade transition
 func _fade_transition(_from_scene: String, to_scene: String) -> void:
-	# Create a simple fade effect
-	# Override to implement custom fade
 	var fade_duration := default_transition_duration
 
+	# Get transition overlay from UIManager
+	var overlay := _get_transition_overlay()
+	if overlay == null:
+		# Fallback to simple timer-based transition
+		await get_tree().create_timer(fade_duration / 2.0).timeout
+		await get_tree().process_frame
+		get_tree().change_scene_to_file(to_scene)
+		await get_tree().create_timer(fade_duration / 2.0).timeout
+		return
+
 	# Fade out
-	# (Override to add actual fade effect)
-	await get_tree().create_timer(fade_duration / 2.0).timeout
+	overlay.modulate.a = 0.0
+	overlay.visible = true
+	var tween := create_tween()
+	tween.tween_property(overlay, "modulate:a", 1.0, fade_duration / 2.0)
+	await tween.finished
 
 	# Change scene
+	await get_tree().process_frame
 	get_tree().change_scene_to_file(to_scene)
+	await get_tree().process_frame
 
 	# Fade in
-	await get_tree().create_timer(fade_duration / 2.0).timeout
+	tween = create_tween()
+	tween.tween_property(overlay, "modulate:a", 0.0, fade_duration / 2.0)
+	await tween.finished
+	overlay.visible = false
 
 
 ## Slide transition
 ## Override this method to customize slide transition
 func _slide_transition(_from_scene: String, to_scene: String) -> void:
-	# Create a simple slide effect
-	# Override to implement custom slide
 	var slide_duration := default_transition_duration
 
-	# Slide out
-	# (Override to add actual slide effect)
-	await get_tree().create_timer(slide_duration / 2.0).timeout
+	# Get transition overlay from UIManager
+	var overlay := _get_transition_overlay()
+	if overlay == null:
+		# Fallback to simple timer-based transition
+		await get_tree().create_timer(slide_duration / 2.0).timeout
+		await get_tree().process_frame
+		get_tree().change_scene_to_file(to_scene)
+		await get_tree().create_timer(slide_duration / 2.0).timeout
+		return
+
+	var screen_width := get_viewport().get_visible_rect().size.x
+
+	# Slide in from right
+	overlay.modulate.a = 1.0
+	overlay.position.x = screen_width
+	overlay.visible = true
+	var tween := create_tween()
+	(
+		tween
+		. tween_property(overlay, "position:x", 0.0, slide_duration / 2.0)
+		. set_trans(Tween.TRANS_CUBIC)
+		. set_ease(Tween.EASE_OUT)
+	)
+	await tween.finished
 
 	# Change scene
+	await get_tree().process_frame
 	get_tree().change_scene_to_file(to_scene)
+	await get_tree().process_frame
 
-	# Slide in
-	await get_tree().create_timer(slide_duration / 2.0).timeout
+	# Slide out to left
+	tween = create_tween()
+	(
+		tween
+		. tween_property(overlay, "position:x", -screen_width, slide_duration / 2.0)
+		. set_trans(Tween.TRANS_CUBIC)
+		. set_ease(Tween.EASE_IN)
+	)
+	await tween.finished
+	overlay.visible = false
+	overlay.position.x = 0.0
+
+
+## Get or create transition overlay from UIManager
+func _get_transition_overlay() -> ColorRect:
+	var ui := GGF.ui()
+	if ui == null:
+		return null
+
+	# Check if transition overlay already exists
+	var overlay_container: Control = null
+	if ui.has_method("get_overlay_container"):
+		overlay_container = ui.call("get_overlay_container") as Control
+
+	if overlay_container == null:
+		return null
+
+	# Look for existing transition overlay
+	var overlay := overlay_container.get_node_or_null("TransitionOverlay") as ColorRect
+	if overlay != null:
+		return overlay
+
+	# Create transition overlay
+	overlay = ColorRect.new()
+	overlay.name = "TransitionOverlay"
+	overlay.color = Color.BLACK
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.visible = false
+	overlay.z_index = 999  # Very high z-index
+	overlay_container.add_child(overlay)
+
+	return overlay
 
 
 ## Reload current scene

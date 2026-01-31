@@ -35,6 +35,10 @@ class_name GGF_SettingsConfig extends Resource
 @export var difficulty: String = "normal"
 @export var language: String = "en"
 
+# Diagnostics defaults
+@export_group("Diagnostics Defaults")
+@export var diagnostics_overlay_enabled: bool = false
+
 
 ## Get all graphics settings as a dictionary
 func get_graphics_defaults() -> Dictionary:
@@ -77,4 +81,5 @@ func get_all_defaults() -> Dictionary:
 		"graphics": get_graphics_defaults(),
 		"audio": get_audio_defaults(),
 		"gameplay": get_gameplay_defaults(),
+		"custom": {"diagnostics_overlay_enabled": diagnostics_overlay_enabled},
 	}

@@ -21,6 +21,7 @@ var _syncing := false
 @onready var _ui_slider: HSlider = %UiSlider
 @onready var _voice_slider: HSlider = %VoiceSlider
 @onready var _mute_unfocused_toggle: CheckBox = %MuteUnfocusedToggle
+@onready var _diagnostics_overlay_toggle: CheckBox = %DiagnosticsOverlayToggle
 @onready var _reset_button: Button = %ResetButton
 @onready var _close_button: Button = %CloseButton
 
@@ -47,6 +48,7 @@ func _ready() -> void:
 	_ui_slider.value_changed.connect(_on_ui_changed)
 	_voice_slider.value_changed.connect(_on_voice_changed)
 	_mute_unfocused_toggle.toggled.connect(_on_mute_unfocused_toggled)
+	_diagnostics_overlay_toggle.toggled.connect(_on_diagnostics_overlay_toggled)
 
 	visibility_changed.connect(_on_visibility_changed)
 
@@ -255,6 +257,14 @@ func _on_mute_unfocused_toggled(enabled: bool) -> void:
 		settings.mute_when_unfocused = enabled
 
 
+func _on_diagnostics_overlay_toggled(enabled: bool) -> void:
+	if _syncing:
+		return
+	var settings := _get_settings()
+	if settings:
+		settings.diagnostics_overlay_enabled = enabled
+
+
 func _sync_from_settings() -> void:
 	var settings := _get_settings()
 	if settings == null:
@@ -275,6 +285,7 @@ func _sync_from_settings() -> void:
 	_ui_slider.value = float(settings.ui_volume)
 	_voice_slider.value = float(settings.voice_volume)
 	_mute_unfocused_toggle.button_pressed = bool(settings.mute_when_unfocused)
+	_diagnostics_overlay_toggle.button_pressed = bool(settings.diagnostics_overlay_enabled)
 	_syncing = false
 
 

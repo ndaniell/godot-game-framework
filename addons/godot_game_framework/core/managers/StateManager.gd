@@ -1,21 +1,16 @@
-class_name GGF_GameManager
-extends Node
+class_name GGF_StateManager
+extends "res://addons/godot_game_framework/core/managers/BaseManager.gd"
 
-## GameManager - Extensible game state management system for the Godot Game Framework
+## StateManager - Extensible game state management system for the Godot Game Framework
 ##
-## This manager handles game state, scene transitions, and game lifecycle.
-## Extend this class to add custom game management functionality.
+## This manager handles game state transitions and game lifecycle.
+## Extend this class to add custom state management functionality.
 ##
 ## States are defined in states.json and can be extended without modifying code.
 
 signal game_state_changed(old_state: String, new_state: String)
-signal scene_changed(scene_path: String)
 signal game_paused(is_paused: bool)
 signal game_quit
-
-# Type constants for cross-manager references (avoids reliance on global class_name scanning).
-const UI_MANAGER_TYPE := preload("res://addons/godot_game_framework/core/managers/UIManager.gd")
-const TIME_MANAGER_TYPE := preload("res://addons/godot_game_framework/core/managers/TimeManager.gd")
 
 const _DEFAULT_STATES_CONFIG_PATH := (
 	"res://addons/godot_game_framework/resources/data/" + "game_states.tres"
@@ -63,10 +58,6 @@ var is_paused: bool = false:
 			event_manager.emit("game_paused", {"is_paused": value})
 		_on_pause_changed(value)
 
-# Scene management
-var current_scene_path: String = ""
-var _scene_transition_in_progress: bool = false
-
 # State machine configuration resource
 var _state_config: Resource = null
 var _default_state: String = "MENU"
@@ -79,23 +70,24 @@ var _initial_state_to_start: String = ""
 func _ready() -> void:
 	# Get LogManager reference
 
-	GGF.log().info("GameManager", "GameManager initializing...")
+	GGF.log().info("StateManager", "StateManager initializing...")
 	_initialize_game()
 	_bind_and_maybe_start_state_machine()
 	_on_game_ready()
-	GGF.log().info("GameManager", "GameManager ready")
+	GGF.log().info("StateManager", "StateManager ready")
+	_set_manager_ready()  # Mark manager as ready
 
 
 ## Initialize game systems
 ## Override this method to customize initialization
 func _initialize_game() -> void:
-	GGF.log().debug("GameManager", "Loading state machine configuration...")
+	GGF.log().debug("StateManager", "Loading state machine configuration...")
 	# Load state machine configuration
 	_load_state_definitions()
 	# Connect to scene tree signals
 	get_tree().node_added.connect(_on_node_added)
 	get_tree().node_removed.connect(_on_node_removed)
-	GGF.log().debug("GameManager", "Game systems initialized")
+	GGF.log().debug("StateManager", "Game systems initialized")
 
 
 ## Load state definitions from Resource file
@@ -118,7 +110,7 @@ func _load_state_definitions() -> void:
 		)
 		return
 
-	GGF.log().debug("GameManager", "Loading state config from: " + states_config_path)
+	GGF.log().debug("StateManager", "Loading state config from: " + states_config_path)
 
 	# Load the state machine configuration resource
 	var config_resource: Resource = null
@@ -165,7 +157,9 @@ func _load_state_definitions() -> void:
 	else:
 		_default_state = "MENU"
 
-	GGF.log().info("GameManager", "State machine initialized with default state: " + _default_state)
+		GGF.log().info(
+			"StateManager", "State machine initialized with default state: " + _default_state
+		)
 
 	# Defer initial state transition until the framework signals readiness.
 	# This keeps startup deterministic for UI-driven games (menus are pre-registered by UIManager).
@@ -178,16 +172,16 @@ func _load_state_definitions() -> void:
 ## @param new_state: String name of the new state (must be defined in state machine config)
 func change_state(new_state: String) -> void:
 	if current_state == new_state:
-		GGF.log().debug("GameManager", "State change ignored - already in state: " + new_state)
+		GGF.log().debug("StateManager", "State change ignored - already in state: " + new_state)
 		return
 
 	if _state_config == null:
-		GGF.log().error("GameManager", "State machine configuration not loaded")
+		GGF.log().error("StateManager", "State machine configuration not loaded")
 		return
 
 	# Validate state exists
 	if not _state_config.has_method("has_state") or not _state_config.has_state(new_state):
-		GGF.log().error("GameManager", "Attempted to change to invalid state: " + new_state)
+		GGF.log().error("StateManager", "Attempted to change to invalid state: " + new_state)
 		return
 
 	# Validate transition is allowed
@@ -210,7 +204,7 @@ func change_state(new_state: String) -> void:
 			)
 			return
 
-	GGF.log().info("GameManager", "Changing state: " + current_state + " -> " + new_state)
+		GGF.log().info("StateManager", "Changing state: " + current_state + " -> " + new_state)
 	var old_state := current_state
 	current_state = new_state
 	# Handle state transition immediately (synchronous)
@@ -229,6 +223,10 @@ func _handle_state_transition(old_state: String, new_state: String) -> void:
 	if new_state_def == null:
 		return
 
+	# Emit state exit event
+	if not old_state.is_empty():
+		_emit_state_event("state_exited", old_state)
+
 	# Call exit callback for old state
 	if old_state_def != null:
 		var exit_callback_val = old_state_def.get("exit_callback")
@@ -246,6 +244,16 @@ func _handle_state_transition(old_state: String, new_state: String) -> void:
 	# Apply optional state properties (data-driven behavior).
 	_apply_state_properties(new_state_def)
 
+	# Emit state enter event
+	_emit_state_event("state_entered", new_state)
+
+
+## Emit state event to EventManager
+func _emit_state_event(event_name: String, state_name: String) -> void:
+	var event_manager := GGF.events()
+	if event_manager and event_manager.has_method("emit"):
+		event_manager.emit(event_name, {"state": state_name})
+
 
 ## Call a state callback method by name
 func _call_state_callback(callback_name: String, state_name: String) -> void:
@@ -262,11 +270,12 @@ func _call_state_callback(callback_name: String, state_name: String) -> void:
 
 
 ## Apply state properties for the active state definition.
-## This enables data-driven behavior without requiring per-project GameManager overrides.
+## This enables data-driven behavior without requiring per-project StateManager overrides.
 ##
 ## Supported keys under `properties`:
 ## - change_scene: String (path)
 ## - transition_type: String (optional; used with change_scene)
+## - load_async: bool (optional; use async loading with progress, default false)
 ## - ui: Dictionary (optional namespace). If present, UI keys are read from here.
 ##
 ## Supported UI keys (either directly in `properties` or under `properties.ui`):
@@ -292,7 +301,13 @@ func _apply_state_properties(state_def: Resource) -> void:
 	if not scene_path.is_empty():
 		var transition_val: Variant = props.get("transition_type", "")
 		var transition_type: String = transition_val if transition_val is String else ""
-		change_scene(scene_path, transition_type)
+		var load_async_val: Variant = props.get("load_async", false)
+		var load_async: bool = load_async_val is bool and (load_async_val as bool)
+
+		if load_async:
+			change_scene_async(scene_path, transition_type)
+		else:
+			change_scene(scene_path, transition_type)
 
 	_apply_state_ui_properties(props)
 
@@ -333,7 +348,7 @@ func _apply_state_ui_properties(props: Dictionary) -> void:
 	if not has_ui_actions:
 		return
 
-	var ui: UI_MANAGER_TYPE = GGF.ui()
+	var ui: GGF_UIManager = GGF.ui()
 	if ui == null:
 		return
 
@@ -430,9 +445,9 @@ func _start_state_machine() -> void:
 ## Override this method to add custom pause logic
 func pause_game() -> void:
 	if is_paused:
-		GGF.log().debug("GameManager", "Pause ignored - game already paused")
+		GGF.log().debug("StateManager", "Pause ignored - game already paused")
 		return
-	GGF.log().info("GameManager", "Pausing game")
+	GGF.log().info("StateManager", "Pausing game")
 	is_paused = true
 	change_state("PAUSED")
 
@@ -441,9 +456,9 @@ func pause_game() -> void:
 ## Override this method to add custom unpause logic
 func unpause_game() -> void:
 	if not is_paused:
-		GGF.log().debug("GameManager", "Unpause ignored - game not paused")
+		GGF.log().debug("StateManager", "Unpause ignored - game not paused")
 		return
-	GGF.log().info("GameManager", "Unpausing game")
+	GGF.log().info("StateManager", "Unpausing game")
 	is_paused = false
 	change_state("PLAYING")
 
@@ -456,71 +471,43 @@ func toggle_pause() -> void:
 		pause_game()
 
 
-## Change scene
-## Override this method to add custom scene transition logic
+## Change scene (delegates to SceneManager)
+## This is a convenience method for state transitions that need scene changes
 func change_scene(scene_path: String, transition_type: String = "") -> void:
-	if _scene_transition_in_progress:
-		GGF.log().warn("GameManager", "Scene transition already in progress")
+	var scene_manager := GGF.scene()
+	if scene_manager == null:
+		GGF.log().error("StateManager", "SceneManager not available")
 		return
 
-	if not ResourceLoader.exists(scene_path):
-		GGF.log().error("GameManager", "Scene path does not exist: " + scene_path)
-		return
-
-	GGF.log().info(
-		"GameManager",
-		(
-			"Changing scene to: "
-			+ scene_path
-			+ (" with transition: " + transition_type if transition_type else "")
-		)
-	)
-
-	_scene_transition_in_progress = true
-	_on_scene_change_started(scene_path, transition_type)
-
-	# Perform transition if specified
-	if transition_type != "":
-		_perform_transition(scene_path, transition_type)
-	else:
-		# Defer the actual scene swap to avoid "Parent node is busy" errors
-		# during _ready()/tree mutations.
-		get_tree().call_deferred("change_scene_to_file", scene_path)
-
-	# Always defer completion to ensure scene change happens first
-	call_deferred("_complete_scene_change", scene_path)
+	scene_manager.change_scene(scene_path, transition_type)
 
 
-## Complete scene change (called deferred after change_scene_to_file)
-func _complete_scene_change(scene_path: String) -> void:
-	current_scene_path = scene_path
-	_scene_transition_in_progress = false
-	scene_changed.emit(scene_path)
-	_on_scene_changed(scene_path)
-	GGF.log().debug("GameManager", "Scene change completed")
-
-
-## Perform scene transition
-## Override this method to implement custom transitions
-func _perform_transition(scene_path: String, _transition_type: String) -> void:
-	# Default: immediate transition
-	# Override to add fade, slide, etc.
-	# Note: Completion is handled by the caller via _complete_scene_change
-	get_tree().call_deferred("change_scene_to_file", scene_path)
-
-
-## Reload current scene
+## Reload current scene (delegates to SceneManager)
 func reload_current_scene() -> void:
-	if current_scene_path.is_empty():
-		GGF.log().warn("GameManager", "No current scene to reload")
+	var scene_manager := GGF.scene()
+	if scene_manager == null:
+		GGF.log().error("StateManager", "SceneManager not available")
 		return
-	change_scene(current_scene_path)
+
+	scene_manager.reload_current_scene()
+
+
+## Change scene asynchronously (delegates to SceneManager)
+## For async loading with progress, use SceneManager directly
+func change_scene_async(scene_path: String, transition_type: String = "") -> void:
+	var scene_manager := GGF.scene()
+	if scene_manager == null:
+		GGF.log().error("StateManager", "SceneManager not available")
+		return
+
+	# Note: SceneManager's change_scene already handles async loading
+	scene_manager.change_scene(scene_path, transition_type)
 
 
 ## Quit the game
 ## Override this method to add custom quit logic
 func quit_game() -> void:
-	GGF.log().info("GameManager", "Game quitting...")
+	GGF.log().info("StateManager", "Game quitting...")
 	_on_game_quit()
 	game_quit.emit()
 	get_tree().quit()
@@ -529,7 +516,7 @@ func quit_game() -> void:
 ## Restart the game
 ## Override this method to add custom restart logic
 func restart_game() -> void:
-	GGF.log().info("GameManager", "Game restarting...")
+	GGF.log().info("StateManager", "Game restarting...")
 	_on_game_restart()
 	# Reload the main scene
 	var main_scene_setting: Variant = ProjectSettings.get_setting("application/run/main_scene", "")
@@ -552,7 +539,7 @@ func _on_game_ready() -> void:
 ## Called when game state changes
 ## Override to handle state-specific logic
 func _on_state_changed(old_state: String, new_state: String) -> void:
-	GGF.log().debug("GameManager", "State changed from '" + old_state + "' to '" + new_state + "'")
+	GGF.log().debug("StateManager", "State changed from '" + old_state + "' to '" + new_state + "'")
 
 
 ## Called when pause state changes
@@ -570,18 +557,6 @@ func _on_node_added(_node: Node) -> void:
 ## Called when a node is removed from the scene tree
 ## Override to handle node removals
 func _on_node_removed(_node: Node) -> void:
-	pass
-
-
-## Called when scene change starts
-## Override to add pre-transition logic
-func _on_scene_change_started(_scene_path: String, _transition_type: String) -> void:
-	pass
-
-
-## Called when scene has changed
-## Override to add post-transition logic
-func _on_scene_changed(_scene_path: String) -> void:
 	pass
 
 
@@ -613,14 +588,14 @@ func _on_loading_started() -> void:
 ## Override to handle pause logic
 func _on_paused_entered() -> void:
 	is_paused = true
-	GGF.log().debug("GameManager", "Entered paused state")
+	GGF.log().debug("StateManager", "Entered paused state")
 
 
 ## Called when paused state is exited
 ## Override to handle unpause logic
 func _on_paused_exited() -> void:
 	is_paused = false
-	GGF.log().debug("GameManager", "Exited paused state")
+	GGF.log().debug("StateManager", "Exited paused state")
 
 
 ## Called when game is quitting
@@ -637,7 +612,7 @@ func _on_game_restart() -> void:
 
 ## Notify TimeManager about pause state
 func _notify_time_manager_pause(paused: bool) -> void:
-	var time_manager: TIME_MANAGER_TYPE = GGF.time()
+	var time_manager: GGF_TimeManager = GGF.time()
 	if time_manager:
 		if paused:
 			# Store current time scale before pausing

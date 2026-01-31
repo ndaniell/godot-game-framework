@@ -1,5 +1,5 @@
 class_name GGF_TimeManager
-extends Node
+extends "res://addons/godot_game_framework/core/managers/BaseManager.gd"
 
 ## TimeManager - Extensible time management system for the Godot Game Framework
 ##
@@ -49,6 +49,7 @@ var _is_day: bool = true
 func _ready() -> void:
 	_initialize_time_manager()
 	_on_time_manager_ready()
+	_set_manager_ready()  # Mark manager as ready
 
 
 ## Initialize time manager

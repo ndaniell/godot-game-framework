@@ -1,5 +1,5 @@
 class_name GGF_NetworkManager
-extends Node
+extends "res://addons/godot_game_framework/core/managers/BaseManager.gd"
 
 ## NetworkManager - Generic ENet networking helper for the Godot Game Framework
 ##
@@ -40,6 +40,7 @@ func _ready() -> void:
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 	GGF.log().info("NetworkManager", "NetworkManager ready")
+	_set_manager_ready()  # Mark manager as ready
 
 
 func _is_offline_peer(peer: MultiplayerPeer) -> bool:

@@ -1,5 +1,5 @@
 class_name GGF_InputManager
-extends Node
+extends "res://addons/godot_game_framework/core/managers/BaseManager.gd"
 
 ## InputManager - Extensible input management system for the Godot Game Framework
 ##
@@ -31,6 +31,7 @@ var current_input_mode: InputMode = InputMode.AUTO:
 # Input remapping data
 var _input_remaps: Dictionary = {}
 var _remap_file_path: String = "user://input_remaps.save"
+var _default_input_map: Dictionary = {}  # Snapshot of defaults for reset
 
 
 ## Initialize the input manager
@@ -47,6 +48,7 @@ func _ready() -> void:
 	_detect_input_mode()
 	_initialize_input_actions()
 	_on_input_manager_ready()
+	_set_manager_ready()  # Mark manager as ready
 
 
 ## Initialize input actions

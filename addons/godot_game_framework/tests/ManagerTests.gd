@@ -48,7 +48,7 @@ func register_tests(registry: RefCounted) -> void:
 				"LogManager exists": Callable(self, "_test_logmanager_exists"),
 				"EventManager exists": Callable(self, "_test_eventmanager_exists"),
 				"AudioManager exists": Callable(self, "_test_audiomanager_exists"),
-				"GameManager exists": Callable(self, "_test_gamemanager_exists"),
+				"StateManager exists": Callable(self, "_test_statemanager_exists"),
 				"SaveManager exists": Callable(self, "_test_savemanager_exists"),
 				"SceneManager exists": Callable(self, "_test_scenemanager_exists"),
 				"UIManager exists": Callable(self, "_test_uimanager_exists"),
@@ -110,7 +110,7 @@ func _test_bootstrap_names_and_groups() -> bool:
 		&"SaveManager",
 		&"NetworkManager",
 		&"InputManager",
-		&"GameManager",
+		&"StateManager",
 		&"UIManager",
 	]
 
@@ -145,7 +145,6 @@ func _test_manager_script_global_names() -> bool:
 	var expected: Dictionary = {
 		&"AudioManager": "GGF_AudioManager",
 		&"EventManager": "GGF_EventManager",
-		&"GameManager": "GGF_GameManager",
 		&"InputManager": "GGF_InputManager",
 		&"LogManager": "GGF_LogManager",
 		&"NetworkManager": "GGF_NetworkManager",
@@ -155,6 +154,7 @@ func _test_manager_script_global_names() -> bool:
 		&"SaveManager": "GGF_SaveManager",
 		&"SceneManager": "GGF_SceneManager",
 		&"SettingsManager": "GGF_SettingsManager",
+		&"StateManager": "GGF_StateManager",
 		&"TimeManager": "GGF_TimeManager",
 		&"UIManager": "GGF_UIManager",
 	}
@@ -213,11 +213,11 @@ func _test_audiomanager_exists() -> bool:
 	return framework.assert_not_null(_m(&"AudioManager"), "AudioManager should exist")
 
 
-func _test_gamemanager_exists() -> bool:
+func _test_statemanager_exists() -> bool:
 	var framework := _get_framework()
 	if framework == null:
 		return false
-	return framework.assert_not_null(_m(&"GameManager"), "GameManager should exist")
+	return framework.assert_not_null(_m(&"StateManager"), "StateManager should exist")
 
 
 func _test_savemanager_exists() -> bool:
@@ -320,21 +320,21 @@ func _test_game_state_transitions() -> bool:
 	var framework := _get_framework()
 	if framework == null:
 		return false
-	var gm := _m(&"GameManager")
-	if gm == null:
+	var sm := _m(&"StateManager")
+	if sm == null:
 		return false
 
 	# Ensure state definitions loaded (may be empty if resource missing).
-	var states: Array = gm.get_all_states()
+	var states: Array = sm.get_all_states()
 	if states.is_empty():
-		return framework.assert_true(false, "Expected GameManager states to be loaded")
+		return framework.assert_true(false, "Expected StateManager states to be loaded")
 
-	var original: String = gm.current_state
-	gm.change_state("PLAYING")
+	var original: String = sm.current_state
+	sm.change_state("PLAYING")
 	var ok: bool = framework.assert_equal(
-		gm.current_state, "PLAYING", "Should transition to PLAYING"
+		sm.current_state, "PLAYING", "Should transition to PLAYING"
 	)
-	gm.change_state(original)
+	sm.change_state(original)
 	return ok
 
 
@@ -675,20 +675,37 @@ func _test_game_pause_unpause() -> bool:
 	var framework := _get_framework()
 	if framework == null:
 		return false
-	var gm := _m(&"GameManager")
-	if gm == null:
+	var sm := _m(&"StateManager")
+	if sm == null:
 		return false
 
 	# Preserve original state.
-	var original: bool = gm.is_paused
-	gm.pause_game()
-	var ok: bool = framework.assert_true(gm.is_paused, "Expected pause_game to set is_paused")
-	gm.unpause_game()
-	ok = framework.assert_false(gm.is_paused, "Expected unpause_game to clear is_paused") and ok
+	var original_paused: bool = sm.is_paused
+	var original_state: String = sm.current_state
+
+	sm.pause_game()
+	var ok: bool = framework.assert_true(sm.is_paused, "Expected pause_game to set is_paused")
+	ok = (
+		framework.assert_equal(sm.current_state, "PAUSED", "Expected pause_game to enter PAUSED")
+		and ok
+	)
+
+	sm.unpause_game()
+	ok = framework.assert_false(sm.is_paused, "Expected unpause_game to clear is_paused") and ok
+	ok = (
+		framework.assert_equal(
+			sm.current_state, "PLAYING", "Expected unpause_game to enter PLAYING"
+		)
+		and ok
+	)
 
 	# Restore original (best-effort).
-	if original:
-		gm.pause_game()
+	if original_paused:
+		sm.pause_game()
+	else:
+		sm.unpause_game()
+	if not original_state.is_empty():
+		sm.change_state(original_state)
 	return ok
 
 

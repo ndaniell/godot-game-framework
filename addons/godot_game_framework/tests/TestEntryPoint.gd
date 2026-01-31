@@ -158,7 +158,7 @@ func _validate_ggf(ggf: Node) -> bool:
 		&"SaveManager",
 		&"NetworkManager",
 		&"InputManager",
-		&"GameManager",
+		&"StateManager",
 		&"UIManager",
 	]
 	for key in required:

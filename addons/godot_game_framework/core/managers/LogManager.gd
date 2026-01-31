@@ -1,5 +1,5 @@
 class_name GGF_LogManager
-extends Node
+extends "res://addons/godot_game_framework/core/managers/BaseManager.gd"
 
 ## LogManager - Centralized logging service for the Godot Game Framework
 ##

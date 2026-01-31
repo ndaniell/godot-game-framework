@@ -111,6 +111,58 @@ try_activate_venv() {
     return 1
 }
 
+ensure_dev_requirements() {
+    # Installs Python dev requirements (gdtoolkit, etc.) into a local venv.
+    # This is used to auto-heal missing lint/format tools on fresh checkouts/CI.
+    local req_file="requirements-dev.txt"
+    if [ ! -f "$req_file" ]; then
+        echo "${RED}Error: $req_file not found.${NC}"
+        return 1
+    fi
+
+    # Prefer activating an existing venv (in this dir or parents).
+    if [ -z "${VIRTUAL_ENV:-}" ] && [ -z "${GGF_VENV_ACTIVATED:-}" ]; then
+        try_activate_venv || true
+    fi
+
+    # If no venv is active, create a local .venv.
+    if [ -z "${VIRTUAL_ENV:-}" ]; then
+        local py=""
+        if command -v python3 > /dev/null 2>&1; then
+            py="python3"
+        elif command -v python > /dev/null 2>&1; then
+            py="python"
+        else
+            echo "${RED}Error: python3/python not found. Cannot install dev tools.${NC}"
+            return 1
+        fi
+
+        if [ ! -f ".venv/bin/activate" ]; then
+            echo "${BLUE}Creating virtual environment: .venv${NC}" >&2
+            "$py" -m venv .venv || return 1
+        fi
+
+        echo "${BLUE}Activating virtual environment: .venv${NC}" >&2
+        # shellcheck disable=SC1091
+        . ".venv/bin/activate"
+        export GGF_VENV_ACTIVATED=1
+    fi
+
+    # Install requirements into the active environment.
+    if ! command -v python > /dev/null 2>&1; then
+        echo "${RED}Error: python not found in the active environment.${NC}"
+        return 1
+    fi
+    if ! python -m pip --version > /dev/null 2>&1; then
+        echo "${RED}Error: pip not available in the active environment.${NC}"
+        return 1
+    fi
+
+    echo "${BLUE}Installing dev tools from ${YELLOW}${req_file}${NC}${BLUE}...${NC}" >&2
+    python -m pip install -r "$req_file" || return 1
+    return 0
+}
+
 require_command() {
     local cmd="$1"
     local human_name="$2"
@@ -123,6 +175,15 @@ require_command() {
     if [ -z "${GGF_VENV_ACTIVATED:-}" ]; then
         if try_activate_venv; then
             # Check again after activation
+            if command -v "$cmd" > /dev/null 2>&1; then
+                return 0
+            fi
+        fi
+    fi
+
+    # Auto-install Python dev requirements for common tooling (lint/format) when missing.
+    if [ "$cmd" = "gdlint" ] || [ "$cmd" = "gdformat" ]; then
+        if ensure_dev_requirements; then
             if command -v "$cmd" > /dev/null 2>&1; then
                 return 0
             fi
@@ -719,6 +780,22 @@ cmd_test() {
     if [ ! -f "$TEST_SCRIPT" ]; then
         echo "${RED}Error: Test entrypoint not found: $TEST_SCRIPT${NC}"
         exit 1
+    fi
+
+    # Ensure Godot project metadata exists (imports, global script class cache, etc.)
+    # Some projects rely on `class_name` types for annotations. In cold CLI runs, Godot
+    # may not have generated `.godot/global_script_class_cache.cfg` yet, which can cause
+    # parse-time failures when loading scripts.
+    local CACHE_FILE=".godot/global_script_class_cache.cfg"
+    if [ ! -f "$CACHE_FILE" ]; then
+        echo "${BLUE}Generating Godot project metadata (imports + script class cache)...${NC}"
+        # --import implies --editor and --quit; using --path makes it robust regardless of cwd.
+        "$GODOT_EXEC" --headless --path "$PWD" --import 2>&1
+        local GEN_EXIT=$?
+        if [ $GEN_EXIT -ne 0 ]; then
+            echo "${RED}Error: metadata generation failed (exit code: $GEN_EXIT)${NC}"
+            exit $GEN_EXIT
+        fi
     fi
     
     echo "${BLUE}Executing tests with Godot (headless mode)...${NC}"

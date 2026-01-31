@@ -1,5 +1,5 @@
 class_name GGF_SettingsManager
-extends Node
+extends "res://addons/godot_game_framework/core/managers/BaseManager.gd"
 
 ## SettingsManager - Extensible settings management system for the Godot Game Framework
 ##
@@ -163,6 +163,14 @@ const SETTINGS_CONFIG_TYPE := preload(
 		language = value
 		_setting_changed("gameplay", "language", value)
 
+# Diagnostics settings
+@export_group("Diagnostics Settings")
+@export var diagnostics_overlay_enabled: bool = false:
+	set(value):
+		diagnostics_overlay_enabled = value
+		_apply_diagnostics_overlay_enabled(value)
+		_setting_changed("custom", "diagnostics_overlay_enabled", value)
+
 # Internal settings storage
 var _settings: Dictionary = {"graphics": {}, "audio": {}, "gameplay": {}, "custom": {}}
 var _autosave_suspend_count: int = 0
@@ -200,6 +208,7 @@ func _ready() -> void:
 		save_settings()
 	_on_settings_manager_ready()
 	GGF.log().info("SettingsManager", "SettingsManager ready")
+	_set_manager_ready()  # Mark manager as ready
 
 
 ## Handle window notifications for focus changes
@@ -258,6 +267,10 @@ func _initialize_settings() -> void:
 		"language": language,
 	}
 
+	_settings["custom"] = {
+		"diagnostics_overlay_enabled": diagnostics_overlay_enabled,
+	}
+
 
 ## Load defaults from SettingsConfig resource
 ## Checks for project override first, then uses assigned config, then falls back to code defaults
@@ -310,6 +323,9 @@ func _apply_config_defaults(config: SETTINGS_CONFIG_TYPE) -> void:
 	# Gameplay defaults
 	difficulty = config.difficulty
 	language = config.language
+
+	# Diagnostics defaults
+	diagnostics_overlay_enabled = config.diagnostics_overlay_enabled
 
 
 ## Load settings from file
@@ -431,6 +447,12 @@ func _apply_settings() -> void:
 		if gameplay.has("language"):
 			language = gameplay["language"]
 
+	# Apply custom settings
+	if _settings.has("custom"):
+		var custom := _settings["custom"] as Dictionary
+		if custom.has("diagnostics_overlay_enabled"):
+			diagnostics_overlay_enabled = bool(custom["diagnostics_overlay_enabled"])
+
 	graphics_settings_changed.emit(_settings.get("graphics", {}))
 	audio_settings_changed.emit(_settings.get("audio", {}))
 	gameplay_settings_changed.emit(_settings.get("gameplay", {}))
@@ -463,6 +485,23 @@ func _update_settings_dict() -> void:
 		"difficulty": difficulty,
 		"language": language,
 	}
+
+	_settings["custom"] = {
+		"diagnostics_overlay_enabled": diagnostics_overlay_enabled,
+	}
+
+
+func _apply_diagnostics_overlay_enabled(enabled: bool) -> void:
+	# Hide/show the overlay immediately. If UIManager isn't ready yet, try again next frame.
+	var ui := GGF.ui()
+	if ui == null or not ui.is_inside_tree():
+		call_deferred("_apply_diagnostics_overlay_enabled", enabled)
+		return
+
+	if enabled:
+		ui.show_ui_element("DiagnosticsOverlay")
+	else:
+		ui.hide_ui_element("DiagnosticsOverlay")
 
 
 ## Set a setting value

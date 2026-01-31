@@ -1,6 +1,6 @@
-# GameManager
+# StateManager
 
-Manages game state, pause functionality, scene transitions, and game lifecycle using a configurable state machine.
+Manages game state, pause functionality, and game lifecycle using a configurable state machine.
 
 ## Table of Contents
 
@@ -15,7 +15,7 @@ Manages game state, pause functionality, scene transitions, and game lifecycle u
 
 ## Overview
 
-The `GameManager` is a flexible game state management system that:
+The `StateManager` is a flexible game state management system that:
 
 - **Manages game states** through a configurable state machine
 - **Handles pause/unpause** with automatic scene tree coordination
@@ -67,9 +67,9 @@ Change to a new game state.
 
 **Example:**
 ```gdscript
-GGF.get_manager(&"GameManager").change_state("PLAYING")
-GGF.get_manager(&"GameManager").change_state("PAUSED")
-GGF.get_manager(&"GameManager").change_state("GAME_OVER")
+GGF.state().change_state("PLAYING")
+GGF.state().change_state("PAUSED")
+GGF.state().change_state("GAME_OVER")
 ```
 
 #### `get_state_name() -> String`
@@ -82,7 +82,7 @@ Check if the game is in a specific state.
 
 **Example:**
 ```gdscript
-if GGF.get_manager(&"GameManager").is_in_state("PLAYING"):
+if GGF.state().is_in_state("PLAYING"):
     # Game is running
 ```
 
@@ -124,7 +124,7 @@ Change to a new scene with optional transition effect.
 
 **Example:**
 ```gdscript
-GGF.get_manager(&"GameManager").change_scene("res://scenes/level2.tscn", "fade")
+GGF.scene().change_scene("res://scenes/level2.tscn", "fade")
 ```
 
 #### `reload_current_scene() -> void`
@@ -151,7 +151,7 @@ Override these methods to add custom behavior:
 
 ### `_on_game_ready() -> void`
 
-Called when GameManager is ready.
+Called when StateManager is ready.
 
 ### `_on_state_changed(old_state: String, new_state: String) -> void`
 
@@ -159,7 +159,7 @@ Called when game state changes.
 
 **Example:**
 ```gdscript
-extends GGF_GameManager
+extends GGF_StateManager
 
 func _on_state_changed(old_state: String, new_state: String) -> void:
     print("State changed: %s -> %s" % [old_state, new_state])
@@ -226,7 +226,7 @@ Called before the game restarts.
 
 ## State Machine Configuration
 
-The GameManager uses a resource-based state machine configuration. States are defined in `GameStateMachineConfig` resources.
+The StateManager uses a resource-based state machine configuration. States are defined in `GameStateMachineConfig` resources.
 
 ### State Definition Structure
 
@@ -278,7 +278,7 @@ exit_callback = "_on_paused_exited"
 ```gdscript
 func _ready() -> void:
     # Start in menu state
-    GGF.get_manager(&"GameManager").change_state("MENU")
+    GGF.state().change_state("MENU")
 
 func start_game() -> void:
     GGF.get_manager(&"GameManager").change_state("PLAYING")
@@ -286,13 +286,13 @@ func start_game() -> void:
 
 func _input(event: InputEvent) -> void:
     if event.is_action_pressed("ui_cancel"):
-        GGF.get_manager(&"GameManager").toggle_pause()
+        GGF.state().toggle_pause()
 ```
 
 ### Custom Game Manager
 
 ```gdscript
-extends GGF_GameManager
+extends GGF_StateManager
 
 var lives: int = 3
 var score: int = 0
@@ -327,7 +327,7 @@ func _on_victory() -> void:
 ### State-Based Behavior
 
 ```gdscript
-extends GGF_GameManager
+extends GGF_StateManager
 
 func _on_state_changed(old_state: String, new_state: String) -> void:
     # Update UI based on state
@@ -355,7 +355,7 @@ func _on_pause_changed(is_paused: bool) -> void:
 ### Level Progression System
 
 ```gdscript
-extends GGF_GameManager
+extends GGF_StateManager
 
 var current_level: int = 1
 var max_level: int = 10
@@ -378,7 +378,7 @@ func _on_scene_changed(scene_path: String) -> void:
 ### Save/Load Integration
 
 ```gdscript
-extends GGF_GameManager
+extends GGF_StateManager
 
 func save_current_game() -> void:
     var save_data = {
@@ -474,7 +474,7 @@ Pause state automatically affects time scale:
 
 ### With EventManager
 
-GameManager emits events that other systems can listen to:
+StateManager emits events that other systems can listen to:
 ```gdscript
 GGF.events().subscribe("game_state_changed", _on_state_change)
 GGF.events().subscribe("game_paused", _on_pause)

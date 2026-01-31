@@ -1,5 +1,5 @@
 class_name GGF_PoolManager
-extends Node
+extends "res://addons/godot_game_framework/core/managers/BaseManager.gd"
 
 ## PoolManager - Extensible object pooling system for the Godot Game Framework
 ##
@@ -27,6 +27,7 @@ var _pools: Dictionary = {}
 func _ready() -> void:
 	_initialize_pool_manager()
 	_on_pool_manager_ready()
+	_set_manager_ready()  # Mark manager as ready
 
 
 ## Initialize pool manager

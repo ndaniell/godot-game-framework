@@ -1,5 +1,5 @@
 class_name GGF_NotificationManager
-extends Node
+extends "res://addons/godot_game_framework/core/managers/BaseManager.gd"
 
 ## NotificationManager - Extensible notification system for the Godot Game Framework
 ##
@@ -58,6 +58,7 @@ func _ready() -> void:
 	_initialize_notification_manager()
 	_on_notification_manager_ready()
 	GGF.log().info("NotificationManager", "NotificationManager ready")
+	_set_manager_ready()  # Mark manager as ready
 
 
 ## Initialize notification manager

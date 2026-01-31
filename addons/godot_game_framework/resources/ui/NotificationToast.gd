@@ -7,6 +7,9 @@ extends PanelContainer
 ## - must expose `set_message(message: String) -> void`
 ## - optional: `set_notification_type(type: int) -> void`
 ## - optional: `set_notification_data(data: Dictionary) -> void`
+##
+## Note: All styling should be done in the scene file or via themes.
+## Optional methods are not implemented - extend this script to add custom behavior.
 
 var _pending_message: String = ""
 var _has_pending_message := false
@@ -24,11 +27,3 @@ func set_message(message: String) -> void:
 	_has_pending_message = true
 	if _message_label != null:
 		_message_label.text = _pending_message
-
-
-func set_notification_type(_type: int) -> void:
-	pass
-
-
-func set_notification_data(_data: Dictionary) -> void:
-	pass

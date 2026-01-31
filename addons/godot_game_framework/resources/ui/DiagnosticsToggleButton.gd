@@ -21,22 +21,22 @@ func _on_pressed() -> void:
 	if GGF == null:
 		return
 
-	if not GGF.has_method("get_manager"):
-		return
+	# Prefer driving the overlay through SettingsManager so the value persists across restarts.
+	# This applies to the default overlay element name only; custom element names fall back
+	# to plain UI show/hide behavior.
+	if diagnostics_element_name == _DEFAULT_ELEMENT_NAME:
+		var settings := GGF.settings()
+		if settings != null:
+			settings.diagnostics_overlay_enabled = not settings.diagnostics_overlay_enabled
+			return
 
-	var ui := GGF.call("get_manager", &"UIManager") as Node
+	var ui := GGF.ui()
 	if ui == null:
 		return
 
-	if not ui.has_method("is_ui_element_visible"):
-		return
-
-	var is_visible_val: Variant = ui.call("is_ui_element_visible", diagnostics_element_name)
-	var visible_now := is_visible_val is bool and (is_visible_val as bool)
+	var visible_now := ui.is_ui_element_visible(diagnostics_element_name)
 
 	if visible_now:
-		if ui.has_method("hide_ui_element"):
-			ui.call("hide_ui_element", diagnostics_element_name, fade)
+		ui.hide_ui_element(diagnostics_element_name, fade)
 	else:
-		if ui.has_method("show_ui_element"):
-			ui.call("show_ui_element", diagnostics_element_name, fade)
+		ui.show_ui_element(diagnostics_element_name, fade)

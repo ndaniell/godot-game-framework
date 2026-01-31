@@ -1,5 +1,5 @@
 class_name GGF_UIManager
-extends CanvasLayer
+extends "res://addons/godot_game_framework/core/managers/BaseManager.gd"
 
 ## UIManager - Extensible UI management system for the Godot Game Framework
 ##
@@ -13,7 +13,6 @@ signal menu_closed(menu_name: String)
 signal dialog_opened(dialog_name: String)
 signal dialog_closed(dialog_name: String)
 signal focus_changed(old_element: Control, new_element: Control)
-signal ui_ready
 
 const _OVERRIDE_UI_CONFIG_PATH := "res://ggf_ui_config.tres"
 const _DEFAULT_UI_RESOURCES_PATH := "res://addons/godot_game_framework/resources/ui/"
@@ -29,58 +28,85 @@ const _DEFAULT_UI_ROOT_SCENE_PATH := "res://addons/godot_game_framework/resource
 @export var dialog_layer: int = 4
 @export var overlay_layer: int = 5
 
-# UI element tracking
-var _ui_elements: Dictionary = {}  # name -> Control
+# UI configuration
+@export_group("UI Configuration")
+@export var ui_config_path: String = ""
+@export var canvas_layer_z_index: int = 100  # Z-index for the UI canvas layer
+
+# Registered UI elements (name -> scene path)
+var _ui_elements: Dictionary = {}
+var _menu_stack: Array[String] = []
 var _open_menus: Array[String] = []
 var _open_dialogs: Array[String] = []
-var _menu_stack: Array[String] = []
 
 # Focus management
 var _focus_history: Array[Control] = []
 var _current_focus: Control = null
 
-# UI scene config + layer containers
+# UI containers (populated from UIRoot)
+var _canvas_layer: CanvasLayer = null
+var _background_container: Control = null
+var _game_container: Control = null
+var _ui_container: Control = null
+var _menu_container: Control = null
+var _dialog_container: Control = null
+var _overlay_container: Control = null
+
 var _ui_config: Resource = null
-var _ui_root: Control = null
-var _layer_containers: Dictionary = {}  # int -> Control
-var _root_container: Control = null
-var _is_ready := false
 
 
 ## Initialize the UI manager
 ## Override this method to add custom initialization
 func _ready() -> void:
-	_initialize_ui_layers()
+	_create_canvas_layer()
 	_ensure_root_container()
 	_load_and_apply_ui_config()
 	_initialize_ui_manager()
 	_on_ui_manager_ready()
-	_is_ready = true
-	ui_ready.emit()
+	_set_manager_ready()  # Mark manager as ready using base class method
 
 
-## Initialize UI layers
-## Override this method to customize layer setup
-func _initialize_ui_layers() -> void:
-	layer = ui_layer
+## Create the canvas layer for UI
+func _create_canvas_layer() -> void:
+	_canvas_layer = CanvasLayer.new()
+	_canvas_layer.name = "UICanvas"
+	_canvas_layer.layer = canvas_layer_z_index
+	add_child(_canvas_layer)
 
 
 func _ensure_root_container() -> void:
-	if _root_container != null and is_instance_valid(_root_container):
+	if _background_container != null and is_instance_valid(_background_container):
 		return
 
-	_root_container = Control.new()
-	_root_container.name = "Root"
-	_root_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_root_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_root_container)
+	# Create a root Control on the canvas layer
+	var root := Control.new()
+	root.name = "UIRoot"
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_canvas_layer.add_child(root)
+
+	# Create layer containers
+	_background_container = _create_layer_container("Background", background_layer, root)
+	_game_container = _create_layer_container("Game", game_layer, root)
+	_ui_container = _create_layer_container("UI", ui_layer, root)
+	_menu_container = _create_layer_container("Menu", menu_layer, root)
+	_dialog_container = _create_layer_container("Dialog", dialog_layer, root)
+	_overlay_container = _create_layer_container("Overlay", overlay_layer, root)
+
+
+## Helper to create a layer container
+func _create_layer_container(container_name: String, z_idx: int, parent: Control) -> Control:
+	var container := Control.new()
+	container.name = container_name
+	container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	container.z_index = z_idx
+	parent.add_child(container)
+	return container
 
 
 ## Load and apply optional UI config Resource.
 func _load_and_apply_ui_config() -> void:
-	if _ui_root != null and is_instance_valid(_ui_root):
-		return
-
 	_ui_config = _load_ui_config_resource()
 
 	var ui_root_scene: PackedScene = null
@@ -149,76 +175,71 @@ func _load_default_ui_root_scene() -> PackedScene:
 
 
 func _instantiate_ui_root(scene: PackedScene) -> bool:
-	if scene == null:
+	var ui_root_inst := scene.instantiate()
+	if ui_root_inst == null or not (ui_root_inst is Control):
+		GGF.log().error("UIManager", "UI root scene must instantiate a Control")
 		return false
 
-	var ui_root_inst := scene.instantiate()
-	if ui_root_inst is Control:
-		_ui_root = ui_root_inst as Control
-		if _root_container != null and is_instance_valid(_root_container):
-			_root_container.add_child(_ui_root)
-		else:
-			add_child(_ui_root)
-		_cache_layer_containers()
-		_apply_container_z_indices()
-		return true
+	ui_root_inst.name = "CustomUIRoot"
+	_canvas_layer.add_child(ui_root_inst)
 
-	if ui_root_inst != null:
-		ui_root_inst.queue_free()
+	# Try to populate containers from the custom UI root if it has the expected children
+	_try_populate_containers_from_custom_root(ui_root_inst as Control)
 
-	GGF.log().error("UIManager", "UI root scene must instance a Control")
-	return false
+	return true
 
 
-func _cache_layer_containers() -> void:
-	_layer_containers.clear()
-	if _ui_root == null:
-		return
+## Try to populate layer containers from a custom UI root
+func _try_populate_containers_from_custom_root(ui_root: Control) -> void:
+	var background := ui_root.get_node_or_null("Background") as Control
+	var game := ui_root.get_node_or_null("Game") as Control
+	var ui := ui_root.get_node_or_null("UI") as Control
+	var menu := ui_root.get_node_or_null("Menu") as Control
+	var dialog := ui_root.get_node_or_null("Dialog") as Control
+	var overlay := ui_root.get_node_or_null("Overlay") as Control
 
-	var background := _ui_root.get_node_or_null("Background") as Control
-	var game := _ui_root.get_node_or_null("Game") as Control
-	var ui := _ui_root.get_node_or_null("UI") as Control
-	var menu := _ui_root.get_node_or_null("Menu") as Control
-	var dialog := _ui_root.get_node_or_null("Dialog") as Control
-	var overlay := _ui_root.get_node_or_null("Overlay") as Control
-
-	if background != null:
-		_layer_containers[background_layer] = background
-	if game != null:
-		_layer_containers[game_layer] = game
-	if ui != null:
-		_layer_containers[ui_layer] = ui
-	if menu != null:
-		_layer_containers[menu_layer] = menu
-	if dialog != null:
-		_layer_containers[dialog_layer] = dialog
-	if overlay != null:
-		_layer_containers[overlay_layer] = overlay
+	if background:
+		_background_container = background
+	if game:
+		_game_container = game
+	if ui:
+		_ui_container = ui
+	if menu:
+		_menu_container = menu
+	if dialog:
+		_dialog_container = dialog
+	if overlay:
+		_overlay_container = overlay
 
 
-func _apply_container_z_indices() -> void:
-	for z in _layer_containers.keys():
-		var container := _layer_containers[z] as Control
-		if container != null:
-			container.z_index = int(z)
-
-
-func is_ready() -> bool:
-	return _is_ready
-
-
+## Get the overlay container for transitions and other full-screen effects
 func get_overlay_container() -> Control:
-	return get_layer_container(overlay_layer)
+	return _overlay_container
 
 
 ## Get the container Control for a layer (z-index).
 func get_layer_container(z_layer: int) -> Control:
-	var container := _layer_containers.get(z_layer, null) as Control
-	if container != null:
-		return container
-	if _root_container != null and is_instance_valid(_root_container):
-		return _root_container
-	return _ui_root if _ui_root != null else null
+	var container: Control = null
+	match z_layer:
+		background_layer:
+			container = _background_container
+		game_layer:
+			container = _game_container
+		ui_layer:
+			container = _ui_container
+		menu_layer:
+			container = _menu_container
+		dialog_layer:
+			container = _dialog_container
+		overlay_layer:
+			container = _overlay_container
+		_:
+			container = _ui_container
+
+	# Default to UI container if the chosen layer is missing.
+	if container == null:
+		container = _ui_container
+	return container
 
 
 ## Register a UI element from a PackedScene.

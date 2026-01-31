@@ -4,7 +4,7 @@ class_name GameStateMachineConfig extends Resource
 ## GameStateMachineConfig - Resource class for the complete state machine configuration
 ##
 ## This resource contains all state definitions and the default state.
-## Load this resource in GameManager to configure the state machine.
+## Load this resource in StateManager to configure the state machine.
 
 # NOTE: In headless/scripted runs, Godot may not have scanned addon `class_name` globals yet.
 # Avoid hard type annotations against custom classes here; validate via script path instead.

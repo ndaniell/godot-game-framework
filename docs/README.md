@@ -20,7 +20,7 @@ Each manager has comprehensive documentation covering:
 ### Core Managers
 
 - **[AudioManager](AudioManager.md)** - Music, sound effects, and volume control
-- **[GameManager](GameManager.md)** - Game state management, pause, and lifecycle
+- **[StateManager](StateManager.md)** - Game state management, pause, and lifecycle
 - **[SaveManager](SaveManager.md)** - Save/load system with multiple slots
 - **[InputManager](InputManager.md)** - Input handling, remapping, and device detection
 - **[SceneManager](SceneManager.md)** - Scene loading, transitions, and caching
@@ -81,9 +81,9 @@ For additional information, see:
 
 ### Game Flow
 
-- Change game states → [GameManager](GameManager.md)
+- Change game states → [StateManager](StateManager.md)
 - Load scenes → [SceneManager](SceneManager.md)
-- Pause/unpause → [GameManager](GameManager.md) + [TimeManager](TimeManager.md)
+- Pause/unpause → [StateManager](StateManager.md) + [TimeManager](TimeManager.md)
 
 ### Data Persistence
 

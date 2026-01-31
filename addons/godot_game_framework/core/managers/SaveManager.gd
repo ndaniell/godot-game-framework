@@ -1,5 +1,5 @@
 class_name GGF_SaveManager
-extends Node
+extends "res://addons/godot_game_framework/core/managers/BaseManager.gd"
 
 ## SaveManager - Extensible save/load system for the Godot Game Framework
 ##
@@ -19,6 +19,8 @@ signal save_failed(slot: int, error: String)
 @export var save_file_extension: String = ".save"
 @export var auto_save_enabled: bool = false
 @export var auto_save_interval: float = 300.0  # 5 minutes
+@export var use_compression: bool = false  # Enable gzip compression
+@export var use_atomic_writes: bool = true  # Write to temp file then rename
 
 # Current save data
 var current_save_slot: int = -1
@@ -38,6 +40,7 @@ func _ready() -> void:
 	_initialize_auto_save()
 	_on_save_manager_ready()
 	GGF.log().info("SaveManager", "SaveManager ready")
+	_set_manager_ready()  # Mark manager as ready
 
 
 ## Initialize save directory
@@ -72,22 +75,52 @@ func save_game(slot: int = 0, metadata: Dictionary = {}) -> bool:
 	# Prepare save data
 	var save_dict := _prepare_save_data(slot, metadata)
 
+	# Serialize to JSON
+	var json_string := JSON.stringify(save_dict)
+	var data_to_write: PackedByteArray
+
+	# Apply compression if enabled
+	if use_compression:
+		data_to_write = json_string.to_utf8_buffer().compress(FileAccess.COMPRESSION_GZIP)
+	else:
+		data_to_write = json_string.to_utf8_buffer()
+
 	# Get file path
 	var file_path := _get_save_file_path(slot)
+	var temp_file_path := file_path + ".tmp"
 
-	# Save to file
-	var file := FileAccess.open(file_path, FileAccess.WRITE)
+	# Use atomic write if enabled
+	var target_path := temp_file_path if use_atomic_writes else file_path
+
+	# Write to file
+	var file := FileAccess.open(target_path, FileAccess.WRITE)
 	if file == null:
 		var error := FileAccess.get_open_error()
 		GGF.log().error(
-			"SaveManager", "Failed to open save file: " + file_path + " (Error: " + str(error) + ")"
+			"SaveManager",
+			"Failed to open save file: " + target_path + " (Error: " + str(error) + ")"
 		)
 		save_failed.emit(slot, "Failed to open file: " + str(error))
 		return false
 
-	# Write save data
-	file.store_string(JSON.stringify(save_dict))
+	file.store_buffer(data_to_write)
+	file.flush()  # Ensure data is written to disk
 	file.close()
+
+	# Atomic write: rename temp file to final file
+	if use_atomic_writes:
+		var dir := DirAccess.open("user://")
+		# Remove old file if it exists
+		if FileAccess.file_exists(file_path):
+			dir.remove(file_path)
+		# Rename temp to final
+		var rename_error := dir.rename(temp_file_path, file_path)
+		if rename_error != OK:
+			GGF.log().error(
+				"SaveManager", "Failed to rename temp save file (Error: " + str(rename_error) + ")"
+			)
+			save_failed.emit(slot, "Failed to finalize save: " + str(rename_error))
+			return false
 
 	GGF.log().info("SaveManager", "Successfully saved game to slot " + str(slot))
 
@@ -130,10 +163,23 @@ func load_game(slot: int = 0) -> bool:
 		save_failed.emit(slot, "Failed to open file: " + str(error))
 		return false
 
-	# Read and parse JSON
-	var json_string := file.get_as_text()
+	# Read data
+	var buffer := file.get_buffer(file.get_length())
 	file.close()
 
+	# Decompress if needed (try decompression, fall back to raw if fails)
+	var json_string := ""
+	if use_compression:
+		var decompressed := buffer.decompress_dynamic(-1, FileAccess.COMPRESSION_GZIP)
+		if decompressed.size() > 0:
+			json_string = decompressed.get_string_from_utf8()
+		else:
+			# Try as uncompressed (backwards compat)
+			json_string = buffer.get_string_from_utf8()
+	else:
+		json_string = buffer.get_string_from_utf8()
+
+	# Parse JSON
 	var json := JSON.new()
 	var parse_error := json.parse(json_string)
 	if parse_error != OK:
@@ -146,6 +192,10 @@ func load_game(slot: int = 0) -> bool:
 		GGF.log().error("SaveManager", "Save file is empty or invalid: " + file_path)
 		save_failed.emit(slot, "Save file is empty")
 		return false
+
+	# Check for version and migrate if needed
+	var save_version := loaded_data.get("version", "1.0") as String
+	loaded_data = _migrate_save_if_needed(save_version, loaded_data)
 
 	GGF.log().info("SaveManager", "Successfully loaded game from slot " + str(slot))
 
@@ -288,6 +338,24 @@ func _apply_save_data(data: Dictionary) -> void:
 	var game_data: Dictionary = game_data_val if game_data_val is Dictionary else {}
 	_apply_player_data(game_data.get("player_data", {}) as Dictionary)
 	_apply_world_data(game_data.get("world_data", {}) as Dictionary)
+
+
+## Migrate save data from an older version
+## Override this method to handle version migrations
+## @param _from_version: The version string of the loaded save (unused in default impl)
+## @param data: The save data dictionary
+## @return: Migrated save data dictionary
+func _migrate_save_if_needed(_from_version: String, data: Dictionary) -> Dictionary:
+	# Default: no migration needed
+	# Override to handle migrations, e.g.:
+	# if from_version == "1.0":
+	#     data = _migrate_1_0_to_1_1(data)
+	#     data["version"] = "1.1"
+	# if from_version == "1.1":
+	#     data = _migrate_1_1_to_2_0(data)
+	#     data["version"] = "2.0"
+
+	return data
 
 
 ## Apply player data

@@ -188,7 +188,7 @@ func _ready() -> void:
 ```gdscript
 func _input(event: InputEvent) -> void:
     if event.is_action_pressed("ui_cancel"):
-        var gm := GGF.get_manager(&"GameManager")
+        var sm := GGF.state()
         var ui := GGF.get_manager(&"UIManager")
         if gm.is_paused:
             ui.close_menu("pause_menu")
@@ -205,16 +205,16 @@ class_name MainMenu extends Control
 
 func _on_play_button_pressed() -> void:
     var ui := GGF.get_manager(&"UIManager")
-    var gm := GGF.get_manager(&"GameManager")
+    var sm := GGF.state()
     ui.close_menu("main_menu")
-    gm.change_state("PLAYING")
-    gm.change_scene("res://scenes/level1.tscn", "fade")
+    sm.change_state("PLAYING")
+    sm.change_scene("res://scenes/level1.tscn", "fade")
 
 func _on_settings_button_pressed() -> void:
     GGF.get_manager(&"UIManager").open_dialog("settings_dialog")
 
 func _on_quit_button_pressed() -> void:
-    GGF.get_manager(&"GameManager").quit_game()
+    GGF.state().quit_game()
 ```
 
 ### Dialog System
@@ -295,6 +295,6 @@ The addon ships these scenes under `addons/godot_game_framework/resources/ui/`:
 
 ## See Also
 
-- [GameManager](GameManager.md) - For game state coordination
+- [StateManager](StateManager.md) - For game state coordination
 - [InputManager](InputManager.md) - For UI input handling
 - [NotificationManager](NotificationManager.md) - For toast messages

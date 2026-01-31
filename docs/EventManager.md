@@ -409,5 +409,5 @@ The framework uses several common events for inter-manager communication:
 
 ## See Also
 
-- [GameManager](GameManager.md) - Uses events for state changes
+- [StateManager](StateManager.md) - Uses events for state changes
 - [SettingsManager](SettingsManager.md) - Emits setting change events

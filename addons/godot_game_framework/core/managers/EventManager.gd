@@ -1,5 +1,5 @@
 class_name GGF_EventManager
-extends Node
+extends "res://addons/godot_game_framework/core/managers/BaseManager.gd"
 
 ## EventManager - Extensible event system for the Godot Game Framework
 ##
@@ -16,8 +16,11 @@ signal listener_removed(event_name: String)
 @export var max_history_size: int = 100
 
 # Event listeners storage
-# Structure: event_name -> Array[Callable]
+# Structure: event_name -> Array[{callable: Callable, priority: int}]
 var _listeners: Dictionary = {}
+
+# One-shot subscriptions (removed after first emit)
+var _one_shot_listeners: Dictionary = {}  # event_name -> Array[Callable]
 
 var _event_history: Array[Dictionary] = []
 
@@ -37,6 +40,7 @@ func _ready() -> void:
 	_initialize_event_manager()
 	_on_event_manager_ready()
 	GGF.log().info("EventManager", "EventManager ready")
+	_set_manager_ready()  # Mark manager as ready
 
 
 ## Initialize event manager
@@ -45,9 +49,10 @@ func _initialize_event_manager() -> void:
 	pass
 
 
-## Subscribe to an event
+## Subscribe to an event with optional priority
+## Higher priority listeners are called first (default: 0)
 ## Override this method to add custom subscription logic
-func subscribe(event_name: String, callable: Callable) -> void:
+func subscribe(event_name: String, callable: Callable, priority: int = 0) -> void:
 	if event_name.is_empty():
 		GGF.log().error("EventManager", "Cannot subscribe to empty event name")
 		return
@@ -62,11 +67,72 @@ func subscribe(event_name: String, callable: Callable) -> void:
 
 	# Add listener if not already present
 	var listeners := _listeners[event_name] as Array
-	if callable not in listeners:
-		listeners.append(callable)
-		GGF.log().debug("EventManager", "Added listener for event: " + event_name)
+	var found := false
+	for entry_var in listeners:
+		var entry: Variant = entry_var
+		if entry is Dictionary:
+			var entry_dict := entry as Dictionary
+			var entry_callable: Callable = entry_dict.get("callable", Callable())
+			if entry_callable == callable:
+				found = true
+				break
+
+	if not found:
+		listeners.append({"callable": callable, "priority": priority})
+		# Sort by priority (higher first)
+		listeners.sort_custom(
+			func(a, b):
+				return (a as Dictionary).get("priority", 0) > (b as Dictionary).get("priority", 0)
+		)
+		GGF.log().debug(
+			"EventManager",
+			"Added listener for event: " + event_name + " (priority: " + str(priority) + ")"
+		)
 		listener_added.emit(event_name)
 		_on_listener_added(event_name, callable)
+
+
+## Subscribe to an event once (auto-unsubscribe after first emission)
+func subscribe_once(event_name: String, callable: Callable, priority: int = 0) -> void:
+	if event_name.is_empty():
+		GGF.log().error("EventManager", "Cannot subscribe to empty event name")
+		return
+
+	if not callable.is_valid():
+		GGF.log().error("EventManager", "Cannot subscribe with invalid callable")
+		return
+
+	# Track as one-shot
+	if not _one_shot_listeners.has(event_name):
+		_one_shot_listeners[event_name] = []
+
+	var one_shots := _one_shot_listeners[event_name] as Array
+	if callable not in one_shots:
+		one_shots.append(callable)
+
+	# Subscribe normally with priority
+	subscribe(event_name, callable, priority)
+
+
+## Unsubscribe all events for a specific owner node
+## Useful for cleanup when nodes are destroyed
+func unsubscribe_all_for_owner(node_owner: Node) -> void:
+	if node_owner == null:
+		return
+
+	var owner_id := node_owner.get_instance_id()
+	if not _owned_subscriptions.has(owner_id):
+		return
+
+	var subscriptions := _owned_subscriptions[owner_id] as Array
+	for sub_info in subscriptions.duplicate():  # Duplicate to avoid modification during iteration
+		var event_name: String = sub_info.get("event_name", "")
+		var callable: Callable = sub_info.get("callable", Callable())
+		if not event_name.is_empty() and callable.is_valid():
+			unsubscribe(event_name, callable)
+
+	_owned_subscriptions.erase(owner_id)
+	GGF.log().debug("EventManager", "Unsubscribed all events for owner")
 
 
 ## Unsubscribe from an event
@@ -76,15 +142,31 @@ func unsubscribe(event_name: String, callable: Callable) -> void:
 		return
 
 	var listeners := _listeners[event_name] as Array
-	var index := listeners.find(callable)
-	if index >= 0:
-		listeners.remove_at(index)
+	var found_index := -1
+	for i in range(listeners.size()):
+		var entry: Variant = listeners[i]
+		if entry is Dictionary:
+			var entry_dict := entry as Dictionary
+			var entry_callable: Callable = entry_dict.get("callable", Callable())
+			if entry_callable == callable:
+				found_index = i
+				break
+
+	if found_index >= 0:
+		listeners.remove_at(found_index)
 		listener_removed.emit(event_name)
 		_on_listener_removed(event_name, callable)
 
 		# Clean up empty event arrays
 		if listeners.is_empty():
 			_listeners.erase(event_name)
+
+	# Remove from one-shot if present
+	if _one_shot_listeners.has(event_name):
+		var one_shots := _one_shot_listeners[event_name] as Array
+		one_shots.erase(callable)
+		if one_shots.is_empty():
+			_one_shot_listeners.erase(event_name)
 
 
 ## Unsubscribe all listeners for an event
@@ -102,6 +184,8 @@ func unsubscribe_all(event_name: String) -> void:
 
 ## Emit an event
 ## Override this method to add custom emission logic
+## Supports wildcard subscriptions:
+## - "network.*" matches "network.connected", "network.disconnected", etc.
 func emit(event_name: String, data: Dictionary = {}) -> void:
 	if event_name.is_empty():
 		GGF.log().warn("EventManager", "Cannot emit empty event name")
@@ -114,28 +198,70 @@ func emit(event_name: String, data: Dictionary = {}) -> void:
 	# Emit signal
 	event_emitted.emit(event_name, data)
 
-	# Notify listeners
+	# Collect all matching listeners (exact + wildcard)
+	var all_listeners: Array = []
+
+	# Direct listeners
 	if _listeners.has(event_name):
-		var listeners := _listeners[event_name] as Array
-		var listener_count := listeners.size()
-		GGF.log().trace(
-			"EventManager",
-			"Emitting event '" + event_name + "' to " + str(listener_count) + " listener(s)"
-		)
+		all_listeners.append_array(_listeners[event_name] as Array)
 
-		# Create a copy to avoid issues if listeners modify the array
-		var listeners_copy := listeners.duplicate()
+	# Wildcard listeners (e.g. "network.*" matches "network.connected")
+	for listener_key in _listeners.keys():
+		var key_str := String(listener_key)
+		if key_str.ends_with(".*"):
+			var prefix := key_str.substr(0, key_str.length() - 2)
+			if event_name.begins_with(prefix + "."):
+				all_listeners.append_array(_listeners[listener_key] as Array)
 
-		for callable in listeners_copy:
-			if callable.is_valid():
-				# Call with data - GDScript callables can handle extra args being ignored
-				# If the function doesn't accept args, they'll be ignored
-				callable.call(data)
-			else:
-				# Remove invalid callables
-				listeners.erase(callable)
-	else:
+	if all_listeners.is_empty():
 		GGF.log().trace("EventManager", "Emitted event '" + event_name + "' (no listeners)")
+		_on_event_emitted(event_name, data)
+		return
+
+	# Sort by priority (already sorted when added, but merge in case of wildcards)
+	all_listeners.sort_custom(
+		func(a, b):
+			var a_priority := 0
+			var b_priority := 0
+			if a is Dictionary:
+				a_priority = (a as Dictionary).get("priority", 0)
+			if b is Dictionary:
+				b_priority = (b as Dictionary).get("priority", 0)
+			return a_priority > b_priority
+	)
+
+	GGF.log().trace(
+		"EventManager",
+		"Emitting event '" + event_name + "' to " + str(all_listeners.size()) + " listener(s)"
+	)
+
+	# Track one-shots to remove after emission
+	var one_shots_to_remove: Array[Callable] = []
+
+	# Notify all listeners
+	for entry in all_listeners:
+		var callable: Callable
+		if entry is Dictionary:
+			callable = (entry as Dictionary).get("callable", Callable())
+		else:
+			callable = entry as Callable  # Legacy support
+
+		if callable.is_valid():
+			callable.call(data)
+
+			# Check if this is a one-shot
+			if _one_shot_listeners.has(event_name):
+				var one_shots := _one_shot_listeners[event_name] as Array
+				if callable in one_shots:
+					one_shots_to_remove.append(callable)
+		else:
+			# Remove invalid callables
+			if _listeners.has(event_name):
+				(_listeners[event_name] as Array).erase(entry)
+
+	# Clean up one-shot listeners
+	for callable in one_shots_to_remove:
+		unsubscribe(event_name, callable)
 
 	_on_event_emitted(event_name, data)
 
@@ -158,6 +284,28 @@ func get_listener_count(event_name: String) -> int:
 ## Get all event names with listeners
 func get_registered_events() -> Array[String]:
 	return _listeners.keys()
+
+
+## Get debug info for all registered events (for diagnostics/inspector)
+func get_events_debug_info() -> Array[Dictionary]:
+	var info: Array[Dictionary] = []
+	for event_name in _listeners.keys():
+		var listeners := _listeners[event_name] as Array
+		var one_shot_count := 0
+		if _one_shot_listeners.has(event_name):
+			one_shot_count = (_one_shot_listeners[event_name] as Array).size()
+
+		(
+			info
+			. append(
+				{
+					"event": event_name,
+					"listener_count": listeners.size(),
+					"one_shot_count": one_shot_count,
+				}
+			)
+		)
+	return info
 
 
 ## Clear all listeners
@@ -220,25 +368,25 @@ func unsubscribe_method(event_name: String, target: Object, method: String) -> v
 
 ## Subscribe with automatic cleanup when owner exits tree
 ## This prevents memory leaks by auto-unsubscribing when the owner node is freed
-func subscribe_owned(event_name: String, owner: Node, method: String) -> void:
-	if owner == null:
+func subscribe_owned(event_name: String, node_owner: Node, method: String) -> void:
+	if node_owner == null:
 		GGF.log().error("EventManager", "Cannot subscribe_owned with null owner")
 		return
 
-	if not owner.has_method(method):
+	if not node_owner.has_method(method):
 		GGF.log().error("EventManager", "Owner does not have method: " + method)
 		return
 
-	var callable := Callable(owner, method)
+	var callable := Callable(node_owner, method)
 	subscribe(event_name, callable)
 
 	# Track this subscription for auto-cleanup
-	var owner_id := owner.get_instance_id()
+	var owner_id := node_owner.get_instance_id()
 	if not _owned_subscriptions.has(owner_id):
 		_owned_subscriptions[owner_id] = []
 		# Connect to tree_exiting signal for auto-cleanup
-		if not owner.is_connected("tree_exiting", _on_owner_exiting):
-			owner.tree_exiting.connect(_on_owner_exiting.bind(owner_id))
+		if not node_owner.is_connected("tree_exiting", _on_owner_exiting):
+			node_owner.tree_exiting.connect(_on_owner_exiting.bind(owner_id))
 
 	var subscription_info := {"event_name": event_name, "callable": callable}
 	(_owned_subscriptions[owner_id] as Array).append(subscription_info)

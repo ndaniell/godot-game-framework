@@ -17,7 +17,7 @@ Features:
 - **Custom timers** with pause awareness
 - **Game time tracking** (scaled and real time)
 - **Day/night cycles** (optional)
-- **Pause coordination** with GameManager
+- **Pause coordination** with StateManager
 
 ## Properties
 
@@ -310,7 +310,7 @@ func _process(_delta: float) -> void:
 
 1. **Use custom timers** for game logic instead of Timer nodes
 2. **Respect time scale** in game physics
-3. **Coordinate with GameManager** for pause functionality
+3. **Coordinate with StateManager** for pause functionality
 4. **Format time** for display using `format_time()`
 5. **Day/night cycles** should transition smoothly
 
@@ -330,5 +330,5 @@ TimeManager subscribes to pause events automatically.
 
 ## See Also
 
-- [GameManager](GameManager.md) - Pause coordination
+- [StateManager](StateManager.md) - Pause coordination
 - [EventManager](EventManager.md) - Time events

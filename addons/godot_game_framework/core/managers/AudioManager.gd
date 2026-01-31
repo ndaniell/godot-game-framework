@@ -1,5 +1,5 @@
 class_name GGF_AudioManager
-extends Node
+extends "res://addons/godot_game_framework/core/managers/BaseManager.gd"
 
 ## AudioManager - Extensible audio management system for the Godot Game Framework
 ##
@@ -65,6 +65,7 @@ func _ready() -> void:
 	_initialize_sfx_pool()
 	_apply_volume_settings()
 	_connect_to_event_manager()
+	_set_manager_ready()  # Mark manager as ready
 
 
 ## Initialize audio buses if they don't exist

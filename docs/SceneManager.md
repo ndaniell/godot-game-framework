@@ -239,5 +239,5 @@ func restart_level() -> void:
 
 ## See Also
 
-- [GameManager](GameManager.md) - Coordinates with scene changes
+- [StateManager](StateManager.md) - Coordinates with scene changes
 - [ResourceManager](ResourceManager.md) - For general resource loading

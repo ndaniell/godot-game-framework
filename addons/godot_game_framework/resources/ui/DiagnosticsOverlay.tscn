@@ -15,12 +15,12 @@ mouse_filter = 2
 script = ExtResource("1_script")
 
 [node name="Panel" type="PanelContainer" parent="."]
-custom_minimum_size = Vector2(420, 220)
+custom_minimum_size = Vector2(560, 130)
 layout_mode = 0
-offset_left = 14.0
-offset_top = 14.0
-offset_right = 434.0
-offset_bottom = 234.0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 570.0
+offset_bottom = 140.0
 
 [node name="Margin" type="MarginContainer" parent="Panel"]
 layout_mode = 2
@@ -46,23 +46,15 @@ text = "Diagnostics"
 layout_mode = 2
 text = "Expand"
 
-[node name="FpsRow" type="HBoxContainer" parent="Panel/Margin/VBox"]
-layout_mode = 2
-theme_override_constants/separation = 10
-
-[node name="FpsToggle" type="CheckButton" parent="Panel/Margin/VBox/FpsRow"]
-layout_mode = 2
-button_pressed = true
-text = "Show FPS"
-
-[node name="FpsValue" type="Label" parent="Panel/Margin/VBox/FpsRow"]
+[node name="StatsRow" type="HFlowContainer" parent="Panel/Margin/VBox"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "0 fps"
-horizontal_alignment = 2
+theme_override_constants/h_separation = 14
+theme_override_constants/v_separation = 6
 
 [node name="GraphPanel" type="PanelContainer" parent="Panel/Margin/VBox"]
-custom_minimum_size = Vector2(0, 120)
+visible = false
+custom_minimum_size = Vector2(0, 260)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -88,6 +80,3 @@ text = "Window"
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="MetricsList" type="VBoxContainer" parent="Panel/Margin/VBox/Extras"]
-layout_mode = 2
-theme_override_constants/separation = 8

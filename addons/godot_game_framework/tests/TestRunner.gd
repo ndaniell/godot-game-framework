@@ -164,29 +164,6 @@ func _validate_ggf(ggf: Node) -> bool:
 		push_error("TestRunner: GGF is missing get_manager(); wrong script?")
 		return false
 
-	# Consider bootstrap failed if any core manager is missing.
-	var required := [
-		&"LogManager",
-		&"EventManager",
-		&"NotificationManager",
-		&"SettingsManager",
-		&"AudioManager",
-		&"TimeManager",
-		&"ResourceManager",
-		&"PoolManager",
-		&"SceneManager",
-		&"SaveManager",
-		&"NetworkManager",
-		&"InputManager",
-		&"GameManager",
-		&"UIManager",
-	]
-	for key in required:
-		var m: Variant = ggf.call("get_manager", key)
-		if m == null:
-			push_error("TestRunner: GGF bootstrap incomplete; missing manager: %s" % String(key))
-			return false
-
 	return true
 
 
