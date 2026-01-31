@@ -12,7 +12,6 @@ msaa_3d = 0
 screen_space_aa = 0
 taa_enabled = false
 max_fps = 0
-borderless = false
 render_scale = 1.0
 master_volume = 1.0
 music_volume = 1.0

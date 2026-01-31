@@ -2,8 +2,6 @@
 ##
 ## Extend this class to create test suites for any part of the framework.
 
-class_name FrameworkTestSuite
-
 extends RefCounted
 
 var test_framework: Node

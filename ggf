@@ -70,12 +70,63 @@ show_help() {
     echo "${GREEN}For more information, visit:${NC} https://godotengine.org/"
 }
 
+# Try to activate a local virtual environment if commands are not found
+try_activate_venv() {
+    # Check if we've already tried to activate (to avoid infinite loops)
+    if [ -n "${GGF_VENV_ACTIVATED:-}" ]; then
+        return 1
+    fi
+    
+    # Look for .venv or venv directories in current dir and up to 3 parent levels
+    local search_dir="$PWD"
+    local max_depth=3
+    local depth=0
+    
+    while [ $depth -le $max_depth ]; do
+        for venv_dir in ".venv" "venv"; do
+            local venv_path="$search_dir/$venv_dir"
+            if [ -f "$venv_path/bin/activate" ]; then
+                echo "${BLUE}Activating virtual environment: $venv_path${NC}" >&2
+                # Source the activation script
+                # shellcheck disable=SC1091
+                . "$venv_path/bin/activate"
+                export GGF_VENV_ACTIVATED=1
+                return 0
+            fi
+        done
+        
+        # Move up one directory
+        local parent_dir
+        parent_dir="$(dirname "$search_dir")"
+        
+        # Stop if we've reached the root or can't go further up
+        if [ "$parent_dir" = "$search_dir" ] || [ "$parent_dir" = "/" ]; then
+            break
+        fi
+        
+        search_dir="$parent_dir"
+        depth=$((depth + 1))
+    done
+    
+    return 1
+}
+
 require_command() {
     local cmd="$1"
     local human_name="$2"
 
     if command -v "$cmd" > /dev/null 2>&1; then
         return 0
+    fi
+    
+    # Try to activate venv if not already done
+    if [ -z "${GGF_VENV_ACTIVATED:-}" ]; then
+        if try_activate_venv; then
+            # Check again after activation
+            if command -v "$cmd" > /dev/null 2>&1; then
+                return 0
+            fi
+        fi
     fi
 
     echo "${RED}Error: '$cmd' not found.${NC}"
@@ -290,7 +341,15 @@ cmd_lint() {
     echo "${BLUE}Linting addon GDScript...${NC}"
     require_command "gdlint" "gdtoolkit" || exit 1
 
-    gdlint addons/godot_game_framework
+    local GDLINT
+    if command -v gdlint > /dev/null 2>&1; then
+        GDLINT="gdlint"
+    else
+        echo "${RED}Error: gdlint command not found even after activation${NC}"
+        exit 1
+    fi
+
+    "$GDLINT" addons/godot_game_framework
 }
 
 # Format addon GDScript
@@ -319,14 +378,22 @@ cmd_format() {
     echo "${BLUE}Formatting addon GDScript...${NC}"
     require_command "gdformat" "gdtoolkit" || exit 1
 
+    local GDFORMAT
+    if command -v gdformat > /dev/null 2>&1; then
+        GDFORMAT="gdformat"
+    else
+        echo "${RED}Error: gdformat command not found even after activation${NC}"
+        exit 1
+    fi
+
     if [ "$CHECK" = true ]; then
         if [ "$DIFF" = true ]; then
-            gdformat --check --diff addons/godot_game_framework
+            "$GDFORMAT" --check --diff addons/godot_game_framework
         else
-            gdformat --check addons/godot_game_framework
+            "$GDFORMAT" --check addons/godot_game_framework
         fi
     else
-        gdformat addons/godot_game_framework
+        "$GDFORMAT" addons/godot_game_framework
     fi
 }
 
@@ -647,52 +714,12 @@ cmd_test() {
         exit 1
     fi
     
-    # Create a test runner script that will execute tests
-    TEST_SCRIPT="/tmp/ggf_test_runner.gd"
-    cat > "$TEST_SCRIPT" << 'EOF'
-extends SceneTree
-
-func _initialize():
-    # Wait for managers to initialize
-    # When extending SceneTree, we are the tree, so use 'self' or direct calls
-    await process_frame
-    await process_frame
-    
-    # Load and run test runner
-    var test_runner_script = load("res://addons/godot_game_framework/tests/TestRunner.gd")
-    if test_runner_script == null:
-        print("ERROR: Could not load TestRunner.gd")
-        quit(1)
-        return
-    
-    var test_runner = test_runner_script.new()
-    root.add_child(test_runner)
-    
-    # Clear script reference after creating instance to help with cleanup
-    # (Script resources are cached by ResourceLoader, but clearing our reference helps)
-    test_runner_script = null
-    
-    # Tests run automatically if auto_run_on_ready is true
-    # TestRunner will quit itself when tests complete via call_deferred
-    # Wait for quit to happen - use a simple loop instead of timer to avoid leak
-    # TestRunner should quit quickly, but we'll wait up to 30 seconds as safety
-    var max_wait = 30.0
-    var elapsed = 0.0
-    var delta = 1.0 / 60.0  # Approximate frame time
-    
-    while elapsed < max_wait:
-        await process_frame
-        elapsed += delta
-        # Check if quit was requested (we can't easily check this, so just wait)
-        # TestRunner will call quit() which will exit the loop
-    
-    # If we reach here, something went wrong - clean up and force quit
-    if is_instance_valid(test_runner):
-        root.remove_child(test_runner)
-        test_runner.free()
-        await process_frame
-    quit(1)
-EOF
+    # Get test entrypoint script
+    TEST_SCRIPT="addons/godot_game_framework/tests/TestEntryPoint.gd"
+    if [ ! -f "$TEST_SCRIPT" ]; then
+        echo "${RED}Error: Test entrypoint not found: $TEST_SCRIPT${NC}"
+        exit 1
+    fi
     
     echo "${BLUE}Executing tests with Godot (headless mode)...${NC}"
     if [ "$VERBOSE" = true ]; then
@@ -705,9 +732,6 @@ EOF
         "$GODOT_EXEC" --headless --script "$TEST_SCRIPT" 2>&1
     fi
     TEST_EXIT_CODE=$?
-    
-    # Clean up
-    rm -f "$TEST_SCRIPT"
     
     echo
     

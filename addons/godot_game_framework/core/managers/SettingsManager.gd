@@ -33,11 +33,16 @@ signal gameplay_settings_changed(settings: Dictionary)
 signal settings_loaded
 signal settings_saved
 
+# Type constant for SettingsConfig (avoids reliance on global class_name scanning).
+const SETTINGS_CONFIG_TYPE := preload(
+	"res://addons/godot_game_framework/core/types/SettingsConfig.gd"
+)
+
 # Settings file path
 @export_group("Settings Configuration")
 @export var settings_file_path: String = "user://settings.save"
 @export var auto_save: bool = true
-@export var default_settings_config: GGF_SettingsConfig
+@export var default_settings_config: SETTINGS_CONFIG_TYPE
 
 # Graphics settings
 @export_group("Graphics Settings")
@@ -100,12 +105,6 @@ signal settings_saved
 		Engine.max_fps = value
 		_setting_changed("graphics", "max_fps", value)
 
-@export var borderless: bool = false:
-	set(value):
-		borderless = value
-		DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS, value)
-		_setting_changed("graphics", "borderless", value)
-
 @export_range(0.5, 2.0, 0.05) var render_scale: float = 1.0:
 	set(value):
 		render_scale = clamp(value, 0.5, 2.0)
@@ -166,6 +165,19 @@ signal settings_saved
 
 # Internal settings storage
 var _settings: Dictionary = {"graphics": {}, "audio": {}, "gameplay": {}, "custom": {}}
+var _autosave_suspend_count: int = 0
+
+
+func _begin_batch_update() -> void:
+	_autosave_suspend_count += 1
+
+
+func _end_batch_update() -> void:
+	_autosave_suspend_count = max(_autosave_suspend_count - 1, 0)
+
+
+func _is_autosave_suspended() -> bool:
+	return _autosave_suspend_count > 0
 
 
 ## Initialize the settings manager
@@ -174,11 +186,18 @@ func _ready() -> void:
 	# Get LogManager reference
 
 	GGF.log().info("SettingsManager", "SettingsManager initializing...")
+	_begin_batch_update()
 	_initialize_settings()
 	# Wait for other managers to be ready before loading settings
 	await get_tree().process_frame
-	load_settings()
-	_apply_settings()
+	var loaded := load_settings()
+	# `load_settings()` applies settings on success; only apply defaults if nothing loaded.
+	if not loaded:
+		_apply_settings()
+	_end_batch_update()
+	# Ensure we persist defaults once on first run (without spamming saves during init).
+	if auto_save and not FileAccess.file_exists(settings_file_path):
+		save_settings()
 	_on_settings_manager_ready()
 	GGF.log().info("SettingsManager", "SettingsManager ready")
 
@@ -222,7 +241,6 @@ func _initialize_settings() -> void:
 		"screen_space_aa": screen_space_aa,
 		"taa_enabled": taa_enabled,
 		"max_fps": max_fps,
-		"borderless": borderless,
 		"render_scale": render_scale,
 	}
 
@@ -244,12 +262,12 @@ func _initialize_settings() -> void:
 ## Load defaults from SettingsConfig resource
 ## Checks for project override first, then uses assigned config, then falls back to code defaults
 func _load_defaults_from_config() -> void:
-	var config: GGF_SettingsConfig = null
+	var config: SETTINGS_CONFIG_TYPE = null
 
 	# Try to load project override config
 	const PROJECT_CONFIG_PATH := "res://ggf_settings_config.tres"
 	if ResourceLoader.exists(PROJECT_CONFIG_PATH):
-		config = load(PROJECT_CONFIG_PATH) as GGF_SettingsConfig
+		config = load(PROJECT_CONFIG_PATH) as SETTINGS_CONFIG_TYPE
 		if config:
 			GGF.log().info(
 				"SettingsManager", "Loaded project settings config from: " + PROJECT_CONFIG_PATH
@@ -266,7 +284,7 @@ func _load_defaults_from_config() -> void:
 
 
 ## Apply defaults from a SettingsConfig resource
-func _apply_config_defaults(config: GGF_SettingsConfig) -> void:
+func _apply_config_defaults(config: SETTINGS_CONFIG_TYPE) -> void:
 	if not config:
 		return
 
@@ -279,7 +297,6 @@ func _apply_config_defaults(config: GGF_SettingsConfig) -> void:
 	screen_space_aa = config.screen_space_aa
 	taa_enabled = config.taa_enabled
 	max_fps = config.max_fps
-	borderless = config.borderless
 	render_scale = config.render_scale
 
 	# Audio defaults
@@ -387,8 +404,6 @@ func _apply_settings() -> void:
 			taa_enabled = graphics["taa_enabled"]
 		if graphics.has("max_fps"):
 			max_fps = graphics["max_fps"]
-		if graphics.has("borderless"):
-			borderless = graphics["borderless"]
 		if graphics.has("render_scale"):
 			render_scale = graphics["render_scale"]
 
@@ -432,7 +447,6 @@ func _update_settings_dict() -> void:
 		"screen_space_aa": screen_space_aa,
 		"taa_enabled": taa_enabled,
 		"max_fps": max_fps,
-		"borderless": borderless,
 		"render_scale": render_scale,
 	}
 
@@ -515,8 +529,6 @@ func _apply_graphics_setting(key: String, value: Variant) -> void:
 			taa_enabled = value
 		"max_fps":
 			max_fps = value
-		"borderless":
-			borderless = value
 		"render_scale":
 			render_scale = value
 
@@ -571,8 +583,10 @@ func _apply_gameplay_setting(key: String, value: Variant) -> void:
 
 ## Reset settings to defaults
 func reset_to_defaults() -> void:
+	_begin_batch_update()
 	_initialize_settings()
 	_apply_settings()
+	_end_batch_update()
 	save_settings()
 	_on_settings_reset()
 
@@ -618,7 +632,7 @@ func _setting_changed(category: String, key: String, value: Variant) -> void:
 	_on_setting_changed(category, key, value)
 
 	# Auto-save if enabled
-	if auto_save:
+	if auto_save and not _is_autosave_suspended():
 		save_settings()
 
 

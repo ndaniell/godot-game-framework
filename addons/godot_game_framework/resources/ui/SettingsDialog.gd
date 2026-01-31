@@ -13,7 +13,6 @@ var _syncing := false
 @onready var _screen_space_aa_dropdown: OptionButton = %ScreenSpaceAaDropdown
 @onready var _taa_toggle: CheckBox = %TaaToggle
 @onready var _window_mode_dropdown: OptionButton = %WindowModeDropdown
-@onready var _borderless_toggle: CheckBox = %BorderlessToggle
 @onready var _max_fps_dropdown: OptionButton = %MaxFpsDropdown
 @onready var _render_scale_slider: HSlider = %RenderScaleSlider
 @onready var _master_slider: HSlider = %MasterSlider
@@ -40,7 +39,6 @@ func _ready() -> void:
 	_screen_space_aa_dropdown.item_selected.connect(_on_screen_space_aa_selected)
 	_taa_toggle.toggled.connect(_on_taa_toggled)
 	_window_mode_dropdown.item_selected.connect(_on_window_mode_selected)
-	_borderless_toggle.toggled.connect(_on_borderless_toggled)
 	_max_fps_dropdown.item_selected.connect(_on_max_fps_selected)
 	_render_scale_slider.value_changed.connect(_on_render_scale_changed)
 	_master_slider.value_changed.connect(_on_master_changed)
@@ -89,16 +87,14 @@ func _populate_dropdowns() -> void:
 	_window_mode_dropdown.clear()
 	_window_mode_dropdown.add_item("Windowed", DisplayServer.WINDOW_MODE_WINDOWED)
 	_window_mode_dropdown.set_item_metadata(0, DisplayServer.WINDOW_MODE_WINDOWED)
-	_window_mode_dropdown.add_item("Minimized", DisplayServer.WINDOW_MODE_MINIMIZED)
-	_window_mode_dropdown.set_item_metadata(1, DisplayServer.WINDOW_MODE_MINIMIZED)
 	_window_mode_dropdown.add_item("Maximized", DisplayServer.WINDOW_MODE_MAXIMIZED)
-	_window_mode_dropdown.set_item_metadata(2, DisplayServer.WINDOW_MODE_MAXIMIZED)
+	_window_mode_dropdown.set_item_metadata(1, DisplayServer.WINDOW_MODE_MAXIMIZED)
 	_window_mode_dropdown.add_item("Fullscreen", DisplayServer.WINDOW_MODE_FULLSCREEN)
-	_window_mode_dropdown.set_item_metadata(3, DisplayServer.WINDOW_MODE_FULLSCREEN)
+	_window_mode_dropdown.set_item_metadata(2, DisplayServer.WINDOW_MODE_FULLSCREEN)
 	_window_mode_dropdown.add_item(
 		"Exclusive Fullscreen", DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN
 	)
-	_window_mode_dropdown.set_item_metadata(4, DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)
+	_window_mode_dropdown.set_item_metadata(3, DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)
 
 	# Populate Max FPS dropdown
 	_max_fps_dropdown.clear()
@@ -218,14 +214,6 @@ func _on_window_mode_selected(index: int) -> void:
 		settings.window_mode = mode
 
 
-func _on_borderless_toggled(enabled: bool) -> void:
-	if _syncing:
-		return
-	var settings := _get_settings()
-	if settings:
-		settings.borderless = enabled
-
-
 func _on_max_fps_selected(index: int) -> void:
 	if _syncing:
 		return
@@ -279,7 +267,6 @@ func _sync_from_settings() -> void:
 	_set_dropdown_by_metadata(_screen_space_aa_dropdown, settings.screen_space_aa)
 	_taa_toggle.button_pressed = bool(settings.taa_enabled)
 	_set_dropdown_by_metadata(_window_mode_dropdown, settings.window_mode)
-	_borderless_toggle.button_pressed = bool(settings.borderless)
 	_set_dropdown_by_metadata(_max_fps_dropdown, settings.max_fps)
 	_render_scale_slider.value = float(settings.render_scale)
 	_master_slider.value = float(settings.master_volume)

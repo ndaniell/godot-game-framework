@@ -13,21 +13,100 @@ extends Node
 ##
 ## Note: With the addon architecture, only `GGF` is an autoload. Managers are created by `GGF`.
 
+signal tests_finished(exit_code: int, results: Dictionary)
+
+const _GGF_SCRIPT: Script = preload("res://addons/godot_game_framework/GGF.gd")
+const _TEST_FRAMEWORK_SCRIPT: Script = preload(
+	"res://addons/godot_game_framework/tests/TestFramework.gd"
+)
+const _TEST_REGISTRY_SCRIPT: Script = preload(
+	"res://addons/godot_game_framework/tests/TestRegistry.gd"
+)
+
 @export var auto_run_on_ready: bool = true
 @export var stop_on_first_failure: bool = false
 @export var discover_tests: bool = true  # Automatically discover test suites
+@export var quit_tree_on_complete: bool = true  # For headless runs
 
 var test_framework: Node
 var test_registry: RefCounted
 var _exit_code: int = 0
+var _last_results: Dictionary = {}
 
 # Store reference to manager_tests for cleanup
 var _manager_tests: RefCounted = null
 
 
 func _ready() -> void:
+	var tree := get_tree()
+	if tree == null or tree.root == null:
+		push_error("TestRunner: No SceneTree/root available to run tests")
+		_exit_code = 1
+		_last_results = {
+			"total": 0,
+			"passed": 0,
+			"failed": 0,
+			"all_passed": false,
+			"message": "No SceneTree/root; tests skipped.",
+		}
+		call_deferred("_finish")
+		return
+
+	var ggf := get_node_or_null("/root/GGF")
+	if ggf == null:
+		# If there is no autoload, create a `GGF` instance for the test run.
+		# We intentionally do NOT mutate ProjectSettings at runtime.
+		if not _GGF_SCRIPT.can_instantiate():
+			push_error("TestRunner: Preloaded GGF.gd is not instantiable (parse error?)")
+			_exit_code = 1
+			_last_results = {
+				"total": 0,
+				"passed": 0,
+				"failed": 0,
+				"all_passed": false,
+				"message": "GGF script not instantiable; tests skipped.",
+			}
+			call_deferred("_finish")
+			return
+
+		ggf = _GGF_SCRIPT.new() as Node
+		if ggf == null:
+			push_error("TestRunner: Failed to instantiate GGF from preloaded script")
+			_exit_code = 1
+			_last_results = {
+				"total": 0,
+				"passed": 0,
+				"failed": 0,
+				"all_passed": false,
+				"message": "GGF instantiation failed; tests skipped.",
+			}
+			call_deferred("_finish")
+			return
+
+		ggf.name = "GGF"
+		tree.root.add_child(ggf)
+
+	# Give GGF `_enter_tree()` / `_ready()` a chance to run.
+	await tree.process_frame
+	await tree.process_frame
+
+	# If GGF isn't ready yet, wait for its readiness signal.
+	await _await_ggf_ready(ggf)
+
+	if not _validate_ggf(ggf):
+		# If GGF can't be brought up, don't run any tests (they assume managers exist).
+		_exit_code = 1
+		_last_results = {
+			"total": 0,
+			"passed": 0,
+			"failed": 0,
+			"all_passed": false,
+			"message": "GGF failed to bootstrap; tests skipped.",
+		}
+		call_deferred("_finish")
+		return
+
 	# Wait for GGF to bootstrap managers
-	var tree = get_tree()
 	if tree:
 		await tree.process_frame
 		# Only wait one frame in headless mode
@@ -35,29 +114,20 @@ func _ready() -> void:
 			await tree.process_frame
 
 	# Avoid engine WARNING output during tests (AssetLib recommendation: no warnings).
-	var ggf := get_node_or_null("/root/GGF")
 	if ggf != null and ggf.has_method("get_manager"):
 		var log_manager: Node = ggf.get_manager(&"LogManager") as Node
 		if log_manager != null and log_manager.has_method("set"):
 			log_manager.set("emit_engine_warnings", false)
 
 	# Initialize test framework
-	var framework_script = load("res://addons/godot_game_framework/tests/TestFramework.gd")
-	if framework_script == null:
-		push_error("TestRunner: Failed to load TestFramework.gd")
-		return
-	test_framework = framework_script.new() as Node
+	test_framework = _TEST_FRAMEWORK_SCRIPT.new() as Node
 	if test_framework != null:
 		if test_framework.has_method("set"):
 			test_framework.set("stop_on_first_failure", stop_on_first_failure)
 		add_child(test_framework)
 
 	# Initialize test registry
-	var registry_script = load("res://addons/godot_game_framework/tests/TestRegistry.gd")
-	if registry_script == null:
-		push_error("TestRunner: Failed to load TestRegistry.gd")
-		return
-	test_registry = registry_script.new() as RefCounted
+	test_registry = _TEST_REGISTRY_SCRIPT.new() as RefCounted
 
 	# Register default test suites
 	if discover_tests:
@@ -65,6 +135,59 @@ func _ready() -> void:
 
 	if auto_run_on_ready:
 		run_all_tests()
+
+
+func _await_ggf_ready(ggf: Node) -> void:
+	if ggf == null or not is_instance_valid(ggf):
+		return
+
+	# Prefer an immediate readiness check to avoid hanging.
+	if ggf.has_method("is_ready"):
+		var ready_val: Variant = ggf.call("is_ready")
+		if ready_val is bool and (ready_val as bool):
+			return
+
+	# Otherwise, wait for the signal if present.
+	if ggf.has_signal("ggf_ready"):
+		await ggf.ggf_ready
+
+
+func _validate_ggf(ggf: Node) -> bool:
+	if ggf == null or not is_instance_valid(ggf):
+		push_error("TestRunner: GGF node is invalid")
+		return false
+	# Ensure `GGF.gd` is at least referenced (preloaded) in test runs, and warn
+	# if the autoload isn't using the framework's expected script.
+	if ggf.get_script() != _GGF_SCRIPT:
+		push_warning("TestRunner: /root/GGF is not using the expected GGF.gd script.")
+	if not ggf.has_method("get_manager"):
+		push_error("TestRunner: GGF is missing get_manager(); wrong script?")
+		return false
+
+	# Consider bootstrap failed if any core manager is missing.
+	var required := [
+		&"LogManager",
+		&"EventManager",
+		&"NotificationManager",
+		&"SettingsManager",
+		&"AudioManager",
+		&"TimeManager",
+		&"ResourceManager",
+		&"PoolManager",
+		&"SceneManager",
+		&"SaveManager",
+		&"NetworkManager",
+		&"InputManager",
+		&"GameManager",
+		&"UIManager",
+	]
+	for key in required:
+		var m: Variant = ggf.call("get_manager", key)
+		if m == null:
+			push_error("TestRunner: GGF bootstrap incomplete; missing manager: %s" % String(key))
+			return false
+
+	return true
 
 
 ## Register default test suites
@@ -95,6 +218,7 @@ func _register_manager_tests() -> void:
 ## Run all registered tests
 func run_all_tests() -> Dictionary:
 	var results: Dictionary = test_framework.run_registered_suites(test_registry)
+	_last_results = results
 
 	# Propagate failure to the process exit code (CI-friendly).
 	_exit_code = 0
@@ -105,30 +229,39 @@ func run_all_tests() -> Dictionary:
 		var all_passed_val: Variant = results.get("all_passed", true)
 		if all_passed_val is bool and not all_passed_val:
 			_exit_code = 1
-	# Quit immediately after tests complete (for headless mode)
-	# Use call_deferred to ensure all output is flushed first
-	call_deferred("_quit_tree")
+
+	# Finish asynchronously after tests complete (flush output + cleanup).
+	call_deferred("_finish")
 	return results
 
 
 func _quit_tree() -> void:
+	# Backwards-compatible alias for older callers.
+	_finish()
+
+
+func _finish() -> void:
 	_cleanup_resources()
 
 	var tree = get_tree()
-	if tree == null:
-		return
+	if tree != null:
+		# Kill any in-flight tweens before quitting.
+		# In headless runs, we can exit while short UI tweens are still active (e.g. notifications),
+		# which triggers "ObjectDB instances leaked at exit".
+		for tween in tree.get_processed_tweens():
+			if tween != null and tween.is_valid():
+				tween.kill()
 
-	# Kill any in-flight tweens before quitting.
-	# In headless runs, we can exit while short UI tweens are still active (e.g. notifications),
-	# which triggers "ObjectDB instances leaked at exit".
-	for tween in tree.get_processed_tweens():
-		if tween != null and tween.is_valid():
-			tween.kill()
+		# Give queued frees/timers a chance to flush before exiting (helps avoid leak warnings).
+		for _i in range(5):
+			await tree.process_frame
 
-	# Give queued frees/timers a chance to flush before exiting (helps avoid leak warnings).
-	for _i in range(5):
-		await tree.process_frame
-	tree.quit(_exit_code)
+	tests_finished.emit(_exit_code, _last_results)
+
+	if quit_tree_on_complete and tree != null:
+		# Free this runner before quitting so the `TestRunner.gd` script isn't reported as "still in use".
+		queue_free()
+		tree.call_deferred("quit", _exit_code)
 
 
 func _cleanup_resources() -> void:

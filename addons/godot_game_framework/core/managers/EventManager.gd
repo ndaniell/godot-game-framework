@@ -21,6 +21,10 @@ var _listeners: Dictionary = {}
 
 var _event_history: Array[Dictionary] = []
 
+# Owned subscriptions for auto-cleanup
+# Structure: owner_instance_id -> Array[{event_name: String, callable: Callable}]
+var _owned_subscriptions: Dictionary = {}
+
 # LogManager reference
 
 
@@ -212,6 +216,53 @@ func unsubscribe_method(event_name: String, target: Object, method: String) -> v
 
 	var callable := Callable(target, method)
 	unsubscribe(event_name, callable)
+
+
+## Subscribe with automatic cleanup when owner exits tree
+## This prevents memory leaks by auto-unsubscribing when the owner node is freed
+func subscribe_owned(event_name: String, owner: Node, method: String) -> void:
+	if owner == null:
+		GGF.log().error("EventManager", "Cannot subscribe_owned with null owner")
+		return
+
+	if not owner.has_method(method):
+		GGF.log().error("EventManager", "Owner does not have method: " + method)
+		return
+
+	var callable := Callable(owner, method)
+	subscribe(event_name, callable)
+
+	# Track this subscription for auto-cleanup
+	var owner_id := owner.get_instance_id()
+	if not _owned_subscriptions.has(owner_id):
+		_owned_subscriptions[owner_id] = []
+		# Connect to tree_exiting signal for auto-cleanup
+		if not owner.is_connected("tree_exiting", _on_owner_exiting):
+			owner.tree_exiting.connect(_on_owner_exiting.bind(owner_id))
+
+	var subscription_info := {"event_name": event_name, "callable": callable}
+	(_owned_subscriptions[owner_id] as Array).append(subscription_info)
+
+	GGF.log().debug(
+		"EventManager",
+		"Added owned subscription for event '" + event_name + "' (owner will auto-cleanup)"
+	)
+
+
+## Internal: Handle owner node exiting tree
+func _on_owner_exiting(owner_id: int) -> void:
+	if not _owned_subscriptions.has(owner_id):
+		return
+
+	var subscriptions := _owned_subscriptions[owner_id] as Array
+	for sub_info in subscriptions:
+		var event_name: String = sub_info.get("event_name", "")
+		var callable: Callable = sub_info.get("callable", Callable())
+		if not event_name.is_empty() and callable.is_valid():
+			unsubscribe(event_name, callable)
+
+	_owned_subscriptions.erase(owner_id)
+	GGF.log().debug("EventManager", "Auto-cleaned up subscriptions for freed owner")
 
 
 ## Virtual methods - Override these in extended classes

@@ -11,12 +11,66 @@ signal ggf_ready
 const MANAGER_GROUP_PREFIX := &"ggf.manager."
 const MANAGER_NODE_PREFIX := "GGF_"
 
-const _TYPE_SCRIPTS: Array[String] = [
-	"res://addons/godot_game_framework/core/types/GameStateDefinition.gd",
-	"res://addons/godot_game_framework/core/types/GameStateMachineConfig.gd",
-	"res://addons/godot_game_framework/core/types/UIConfig.gd",
-	"res://addons/godot_game_framework/core/types/SettingsConfig.gd",
+const _TYPE_SCRIPTS: Array[Script] = [
+	preload("res://addons/godot_game_framework/core/types/GameStateDefinition.gd"),
+	preload("res://addons/godot_game_framework/core/types/GameStateMachineConfig.gd"),
+	preload("res://addons/godot_game_framework/core/types/UIConfig.gd"),
+	preload("res://addons/godot_game_framework/core/types/SettingsConfig.gd"),
 ]
+
+const _LOG_MANAGER_SCRIPT := preload(
+	"res://addons/godot_game_framework/core/managers/LogManager.gd"
+)
+const _EVENT_MANAGER_SCRIPT := preload(
+	"res://addons/godot_game_framework/core/managers/EventManager.gd"
+)
+const _NOTIFICATION_MANAGER_SCRIPT := preload(
+	"res://addons/godot_game_framework/core/managers/NotificationManager.gd"
+)
+const _SETTINGS_MANAGER_SCRIPT := preload(
+	"res://addons/godot_game_framework/core/managers/SettingsManager.gd"
+)
+const _AUDIO_MANAGER_SCRIPT := preload(
+	"res://addons/godot_game_framework/core/managers/AudioManager.gd"
+)
+const _TIME_MANAGER_SCRIPT := preload(
+	"res://addons/godot_game_framework/core/managers/TimeManager.gd"
+)
+const _RESOURCE_MANAGER_SCRIPT := preload(
+	"res://addons/godot_game_framework/core/managers/ResourceManager.gd"
+)
+const _POOL_MANAGER_SCRIPT := preload(
+	"res://addons/godot_game_framework/core/managers/PoolManager.gd"
+)
+const _SCENE_MANAGER_SCRIPT := preload(
+	"res://addons/godot_game_framework/core/managers/SceneManager.gd"
+)
+const _SAVE_MANAGER_SCRIPT := preload(
+	"res://addons/godot_game_framework/core/managers/SaveManager.gd"
+)
+const _NETWORK_MANAGER_SCRIPT := preload(
+	"res://addons/godot_game_framework/core/managers/NetworkManager.gd"
+)
+const _INPUT_MANAGER_SCRIPT := preload(
+	"res://addons/godot_game_framework/core/managers/InputManager.gd"
+)
+const _GAME_MANAGER_SCRIPT := preload(
+	"res://addons/godot_game_framework/core/managers/GameManager.gd"
+)
+const _UI_MANAGER_SCRIPT := preload("res://addons/godot_game_framework/core/managers/UIManager.gd")
+
+# Type constants for typed accessors (avoids reliance on global class_name scanning).
+const GAME_MANAGER_TYPE := _GAME_MANAGER_SCRIPT
+const UI_MANAGER_TYPE := _UI_MANAGER_SCRIPT
+const NETWORK_MANAGER_TYPE := _NETWORK_MANAGER_SCRIPT
+const SETTINGS_MANAGER_TYPE := _SETTINGS_MANAGER_SCRIPT
+const AUDIO_MANAGER_TYPE := _AUDIO_MANAGER_SCRIPT
+const TIME_MANAGER_TYPE := _TIME_MANAGER_SCRIPT
+const SCENE_MANAGER_TYPE := _SCENE_MANAGER_SCRIPT
+const SAVE_MANAGER_TYPE := _SAVE_MANAGER_SCRIPT
+const INPUT_MANAGER_TYPE := _INPUT_MANAGER_SCRIPT
+const RESOURCE_MANAGER_TYPE := _RESOURCE_MANAGER_SCRIPT
+const POOL_MANAGER_TYPE := _POOL_MANAGER_SCRIPT
 
 var _managers: Dictionary = {}  # StringName -> Node
 var _bootstrapped := false
@@ -41,60 +95,20 @@ func _bootstrap() -> void:
 	# Instantiate managers in a dependency-friendly order.
 	# - Logging first (used by most others)
 	# - Events early (used for cross-manager communication)
-	_ensure_manager(
-		&"LogManager", _load_script("res://addons/godot_game_framework/core/managers/LogManager.gd")
-	)
-	_ensure_manager(
-		&"EventManager",
-		_load_script("res://addons/godot_game_framework/core/managers/EventManager.gd")
-	)
-	_ensure_manager(
-		&"NotificationManager",
-		_load_script("res://addons/godot_game_framework/core/managers/NotificationManager.gd")
-	)
-	_ensure_manager(
-		&"SettingsManager",
-		_load_script("res://addons/godot_game_framework/core/managers/SettingsManager.gd")
-	)
-	_ensure_manager(
-		&"AudioManager",
-		_load_script("res://addons/godot_game_framework/core/managers/AudioManager.gd")
-	)
-	_ensure_manager(
-		&"TimeManager",
-		_load_script("res://addons/godot_game_framework/core/managers/TimeManager.gd")
-	)
-	_ensure_manager(
-		&"ResourceManager",
-		_load_script("res://addons/godot_game_framework/core/managers/ResourceManager.gd")
-	)
-	_ensure_manager(
-		&"PoolManager",
-		_load_script("res://addons/godot_game_framework/core/managers/PoolManager.gd")
-	)
-	_ensure_manager(
-		&"SceneManager",
-		_load_script("res://addons/godot_game_framework/core/managers/SceneManager.gd")
-	)
-	_ensure_manager(
-		&"SaveManager",
-		_load_script("res://addons/godot_game_framework/core/managers/SaveManager.gd")
-	)
-	_ensure_manager(
-		&"NetworkManager",
-		_load_script("res://addons/godot_game_framework/core/managers/NetworkManager.gd")
-	)
-	_ensure_manager(
-		&"InputManager",
-		_load_script("res://addons/godot_game_framework/core/managers/InputManager.gd")
-	)
-	_ensure_manager(
-		&"GameManager",
-		_load_script("res://addons/godot_game_framework/core/managers/GameManager.gd")
-	)
-	_ensure_manager(
-		&"UIManager", _load_script("res://addons/godot_game_framework/core/managers/UIManager.gd")
-	)
+	_ensure_manager(&"LogManager", _LOG_MANAGER_SCRIPT)
+	_ensure_manager(&"EventManager", _EVENT_MANAGER_SCRIPT)
+	_ensure_manager(&"NotificationManager", _NOTIFICATION_MANAGER_SCRIPT)
+	_ensure_manager(&"SettingsManager", _SETTINGS_MANAGER_SCRIPT)
+	_ensure_manager(&"AudioManager", _AUDIO_MANAGER_SCRIPT)
+	_ensure_manager(&"TimeManager", _TIME_MANAGER_SCRIPT)
+	_ensure_manager(&"ResourceManager", _RESOURCE_MANAGER_SCRIPT)
+	_ensure_manager(&"PoolManager", _POOL_MANAGER_SCRIPT)
+	_ensure_manager(&"SceneManager", _SCENE_MANAGER_SCRIPT)
+	_ensure_manager(&"SaveManager", _SAVE_MANAGER_SCRIPT)
+	_ensure_manager(&"NetworkManager", _NETWORK_MANAGER_SCRIPT)
+	_ensure_manager(&"InputManager", _INPUT_MANAGER_SCRIPT)
+	_ensure_manager(&"GameManager", _GAME_MANAGER_SCRIPT)
+	_ensure_manager(&"UIManager", _UI_MANAGER_SCRIPT)
 
 	_bind_ready_signal()
 
@@ -109,21 +123,21 @@ func _bind_ready_signal() -> void:
 	if _is_ready:
 		return
 
-	var ui := get_manager(&"UIManager")
-	if ui == null:
+	var ui_manager := ui()
+	if ui_manager == null:
 		call_deferred("_emit_ready")
 		return
 
-	if ui.has_method("is_ready"):
-		var ready_val: Variant = ui.call("is_ready")
+	if ui_manager.has_method("is_ready"):
+		var ready_val: Variant = ui_manager.call("is_ready")
 		if ready_val is bool and (ready_val as bool):
 			call_deferred("_emit_ready")
 			return
 
-	if ui.has_signal("ui_ready"):
+	if ui_manager.has_signal("ui_ready"):
 		var cb := Callable(self, "_emit_ready")
-		if not ui.is_connected("ui_ready", cb):
-			ui.connect("ui_ready", cb, CONNECT_ONE_SHOT)
+		if not ui_manager.is_connected("ui_ready", cb):
+			ui_manager.connect("ui_ready", cb, CONNECT_ONE_SHOT)
 	else:
 		call_deferred("_emit_ready")
 
@@ -135,20 +149,12 @@ func _emit_ready() -> void:
 	ggf_ready.emit()
 
 
-func _load_script(path: String) -> Script:
-	if not ResourceLoader.exists(path):
-		push_error("GGF: Manager script not found: %s" % path)
-		return null
-	return load(path) as Script
-
-
 func _load_type_scripts() -> void:
-	for p in _TYPE_SCRIPTS:
-		if ResourceLoader.exists(p):
-			# Load to register `class_name` globals.
-			load(p)
-		else:
-			push_warning("GGF: Type script not found: %s" % p)
+	# Type scripts are preloaded above. This function remains to preserve behavior and
+	# ensure these scripts are referenced in headless/scripted runs.
+	for s in _TYPE_SCRIPTS:
+		if s == null:
+			push_warning("GGF: Preloaded type script is null (unexpected).")
 
 
 func _ensure_manager(key: StringName, script: Script) -> Node:
@@ -176,12 +182,14 @@ func _ensure_manager(key: StringName, script: Script) -> Node:
 ## Generic manager lookup.
 ## Prefer this over hardcoded `/root/...` paths.
 func get_manager(key: StringName) -> Node:
-	var cached := _managers.get(key, null)
+	var cached: Variant = _managers.get(key, null)
 	if cached != null and is_instance_valid(cached):
 		return cached as Node
 
 	# Fallback: group-based lookup (in case something reloaded).
 	var group := MANAGER_GROUP_PREFIX + key
+	if not is_inside_tree():
+		return null
 	var nodes := get_tree().get_nodes_in_group(group)
 	if nodes.size() > 0:
 		var n := nodes[0] as Node
@@ -202,3 +210,49 @@ func events() -> Node:
 
 func notifications() -> Node:
 	return get_manager(&"NotificationManager")
+
+
+## Typed accessors - Better IDE autocomplete and type safety.
+## Returns typed managers or null if not available.
+func game() -> GAME_MANAGER_TYPE:
+	return get_manager(&"GameManager") as GAME_MANAGER_TYPE
+
+
+func ui() -> UI_MANAGER_TYPE:
+	return get_manager(&"UIManager") as UI_MANAGER_TYPE
+
+
+func network() -> NETWORK_MANAGER_TYPE:
+	return get_manager(&"NetworkManager") as NETWORK_MANAGER_TYPE
+
+
+func settings() -> SETTINGS_MANAGER_TYPE:
+	return get_manager(&"SettingsManager") as SETTINGS_MANAGER_TYPE
+
+
+func audio() -> AUDIO_MANAGER_TYPE:
+	return get_manager(&"AudioManager") as AUDIO_MANAGER_TYPE
+
+
+func time() -> TIME_MANAGER_TYPE:
+	return get_manager(&"TimeManager") as TIME_MANAGER_TYPE
+
+
+func scene() -> SCENE_MANAGER_TYPE:
+	return get_manager(&"SceneManager") as SCENE_MANAGER_TYPE
+
+
+func save() -> SAVE_MANAGER_TYPE:
+	return get_manager(&"SaveManager") as SAVE_MANAGER_TYPE
+
+
+func input() -> INPUT_MANAGER_TYPE:
+	return get_manager(&"InputManager") as INPUT_MANAGER_TYPE
+
+
+func resources() -> RESOURCE_MANAGER_TYPE:
+	return get_manager(&"ResourceManager") as RESOURCE_MANAGER_TYPE
+
+
+func pool() -> POOL_MANAGER_TYPE:
+	return get_manager(&"PoolManager") as POOL_MANAGER_TYPE

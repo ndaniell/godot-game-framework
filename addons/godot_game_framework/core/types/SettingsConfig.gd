@@ -19,7 +19,6 @@ class_name GGF_SettingsConfig extends Resource
 @export var screen_space_aa: Viewport.ScreenSpaceAA = Viewport.SCREEN_SPACE_AA_DISABLED
 @export var taa_enabled: bool = false
 @export var max_fps: int = 0  # 0 = uncapped
-@export var borderless: bool = false
 @export_range(0.5, 2.0, 0.05) var render_scale: float = 1.0
 
 # Audio settings defaults
@@ -48,7 +47,6 @@ func get_graphics_defaults() -> Dictionary:
 		"screen_space_aa": screen_space_aa,
 		"taa_enabled": taa_enabled,
 		"max_fps": max_fps,
-		"borderless": borderless,
 		"render_scale": render_scale,
 	}
 

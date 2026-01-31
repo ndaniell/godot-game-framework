@@ -13,6 +13,10 @@ signal scene_changed(scene_path: String)
 signal game_paused(is_paused: bool)
 signal game_quit
 
+# Type constants for cross-manager references (avoids reliance on global class_name scanning).
+const UI_MANAGER_TYPE := preload("res://addons/godot_game_framework/core/managers/UIManager.gd")
+const TIME_MANAGER_TYPE := preload("res://addons/godot_game_framework/core/managers/TimeManager.gd")
+
 const _DEFAULT_STATES_CONFIG_PATH := (
 	"res://addons/godot_game_framework/resources/data/" + "game_states.tres"
 )
@@ -329,32 +333,32 @@ func _apply_state_ui_properties(props: Dictionary) -> void:
 	if not has_ui_actions:
 		return
 
-	var ui := GGF.get_manager(&"UIManager")
+	var ui: UI_MANAGER_TYPE = GGF.ui()
 	if ui == null:
 		return
 
 	# Apply UI actions (UI is ready).
-	if close_menus and ui.has_method("close_all_menus"):
-		ui.call("close_all_menus")
+	if close_menus:
+		ui.close_all_menus()
 
-	if close_dialogs and ui.has_method("close_all_dialogs"):
-		ui.call("close_all_dialogs")
+	if close_dialogs:
+		ui.close_all_dialogs()
 
-	if not open_menu.is_empty() and ui.has_method("open_menu"):
+	if not open_menu.is_empty():
 		var close_others_val: Variant = ui_props.get("open_menu_close_others", true)
 		var close_others: bool = close_others_val is bool and (close_others_val as bool)
-		ui.call("open_menu", open_menu, close_others)
+		ui.open_menu(open_menu, close_others)
 
-	if not open_dialog.is_empty() and ui.has_method("open_dialog"):
+	if not open_dialog.is_empty():
 		var modal_val: Variant = ui_props.get("open_dialog_modal", true)
 		var modal: bool = modal_val is bool and (modal_val as bool)
-		ui.call("open_dialog", open_dialog, modal)
+		ui.open_dialog(open_dialog, modal)
 
-	if not show_element.is_empty() and ui.has_method("show_ui_element"):
-		ui.call("show_ui_element", show_element)
+	if not show_element.is_empty():
+		ui.show_ui_element(show_element)
 
-	if not hide_element.is_empty() and ui.has_method("hide_ui_element"):
-		ui.call("hide_ui_element", hide_element)
+	if not hide_element.is_empty():
+		ui.hide_ui_element(hide_element)
 
 
 func _merge_state_property_overrides(state_def: Resource, base_props: Dictionary) -> Dictionary:
@@ -633,12 +637,12 @@ func _on_game_restart() -> void:
 
 ## Notify TimeManager about pause state
 func _notify_time_manager_pause(paused: bool) -> void:
-	var time_manager := GGF.get_manager(&"TimeManager")
-	if time_manager and time_manager.has_method("set_time_scale"):
+	var time_manager: TIME_MANAGER_TYPE = GGF.time()
+	if time_manager:
 		if paused:
 			# Store current time scale before pausing
-			if not time_manager.get("_pre_pause_time_scale") != null:
-				time_manager.set("_pre_pause_time_scale", time_manager.get("time_scale"))
+			if time_manager.get("_pre_pause_time_scale") == null:
+				time_manager.set("_pre_pause_time_scale", time_manager.time_scale)
 			time_manager.set_time_scale(0.0)
 		else:
 			# Restore time scale after unpausing
