@@ -1,3 +1,4 @@
+@tool
 class_name GameStateMachineConfig extends Resource
 
 ## GameStateMachineConfig - Resource class for the complete state machine configuration
