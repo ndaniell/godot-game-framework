@@ -9,7 +9,7 @@ A comprehensive, extensible game framework for Godot 4.5+ that provides essentia
 ### Core Managers
 
 - **AudioManager** - Music, sound effects, and volume control
-- **GameManager** - Game state management, pause, and lifecycle
+- **StateManager** - Game state machine, pause, and lifecycle
 - **SaveManager** - Save/load system with multiple slots
 - **InputManager** - Input handling, remapping, and device detection
 - **SceneManager** - Scene loading, transitions, and caching
@@ -17,7 +17,8 @@ A comprehensive, extensible game framework for Godot 4.5+ that provides essentia
 - **SettingsManager** - Graphics, audio, and gameplay settings
 - **EventManager** - Global event bus (pub/sub pattern)
 - **LogManager** - Structured logging and debugging utilities
-- **ResourceManager** - Resource loading, caching, and pooling
+- **NetworkManager** - Multiplayer networking (ENet)
+- **ResourceManager** - Resource loading and caching
 - **PoolManager** - Object pooling for performance
 - **TimeManager** - Time scaling, timers, and day/night cycles
 - **NotificationManager** - Toast notifications and system messages
@@ -32,9 +33,23 @@ A comprehensive, extensible game framework for Godot 4.5+ that provides essentia
 
 ## Installation
 
+### As an addon (recommended)
+
+1. Copy `addons/godot_game_framework/` into your project’s `addons/` folder
+2. (Optional) In Godot: **Project → Project Settings → Plugins** → enable **Godot Game Framework**
+3. Add a project autoload named `GGF` (the plugin **does not** create autoloads)
+   - **Project → Project Settings → Autoload**
+   - Path: your bootstrapper script that extends the framework base:
+
+```gdscript
+# res://src/GGF.gd
+extends "res://addons/godot_game_framework/GGF.gd"
+```
+
+### Developing the framework itself
+
 1. Clone or download this repository
 2. Open the project in Godot 4.5 or later
-3. Enable the addon (or keep `GGF` autoload enabled)
 
 ## Quick Start
 
@@ -44,19 +59,19 @@ Managers are available via the single autoload bootstrapper `GGF`:
 
 ```gdscript
 # Play music
-GGF.get_manager(&"AudioManager").play_music(my_music_stream)
+GGF.audio().play_music(my_music_stream)
 
 # Change game state
-GGF.get_manager(&"GameManager").change_state("PLAYING")
+GGF.state().change_state("PLAYING")
 
 # Save game
-GGF.get_manager(&"SaveManager").save_game(0, {"level": 5, "score": 1000})
+GGF.save().save_game(0, {"label": "Checkpoint 1"})
 
 # Show notification
 GGF.notifications().show_success("Level Complete!")
 
 # Create object pool
-var pool_manager := GGF.get_manager(&"PoolManager")
+var pool_manager := GGF.pool()
 pool_manager.create_pool("bullets", bullet_prefab, 20)
 var bullet = pool_manager.spawn("bullets", position)
 ```
@@ -78,7 +93,7 @@ func _on_music_started(stream: AudioStream) -> void:
 ### Core Managers
 
 - **[AudioManager](docs/AudioManager.md)** - Music, sound effects, and volume control
-- **[GameManager](docs/GameManager.md)** - Game state management, pause, and lifecycle
+- **[StateManager](docs/StateManager.md)** - Game state machine, pause, and lifecycle
 - **[SaveManager](docs/SaveManager.md)** - Save/load system with multiple slots
 - **[InputManager](docs/InputManager.md)** - Input handling, remapping, and device detection
 - **[SceneManager](docs/SceneManager.md)** - Scene loading, transitions, and caching
@@ -88,8 +103,9 @@ func _on_music_started(stream: AudioStream) -> void:
 
 - **[EventManager](docs/EventManager.md)** - Global event bus (pub/sub pattern)
 - **[LogManager](docs/LogManager.md)** - Structured logging and debugging utilities
+- **[NetworkManager](docs/NetworkManager.md)** - Multiplayer networking (ENet)
 - **[SettingsManager](docs/SettingsManager.md)** - Graphics, audio, and gameplay settings
-- **[ResourceManager](docs/ResourceManager.md)** - Resource loading, caching, and pooling
+- **[ResourceManager](docs/ResourceManager.md)** - Resource loading and caching
 - **[PoolManager](docs/PoolManager.md)** - Object pooling for performance
 
 ### Utility Managers
@@ -101,23 +117,23 @@ func _on_music_started(stream: AudioStream) -> void:
 
 ```gdscript
 # Audio
-GGF.get_manager(&"AudioManager").play_music(music_stream, fade_in=true)
-GGF.get_manager(&"AudioManager").play_sfx(sfx_stream)
+GGF.audio().play_music(music_stream, fade_in=true)
+GGF.audio().play_sfx(sfx_stream)
 
 # Game State
-GGF.get_manager(&"GameManager").change_state("PLAYING")
-GGF.get_manager(&"GameManager").pause_game()
+GGF.state().change_state("PLAYING")
+GGF.state().pause_game()
 
 # Save/Load
-GGF.get_manager(&"SaveManager").save_game(0, {"level": 5})
-GGF.get_manager(&"SaveManager").load_game(0)
+GGF.save().save_game(0, {"label": "Slot 1"})
+GGF.save().load_game(0)
 
 # Events
 GGF.events().subscribe("player_died", _on_player_died)
 GGF.events().emit("player_died", {"score": 1000})
 
 # UI
-GGF.get_manager(&"UIManager").open_menu("main_menu")
+GGF.ui().open_menu("main_menu")
 GGF.notifications().show_success("Level Complete!")
 ```
 
@@ -128,7 +144,7 @@ For detailed documentation on each manager, see the **[docs/](docs/)** folder.
 Managers are designed to work together seamlessly:
 
 - **SettingsManager** ↔ **AudioManager** - Settings automatically apply to audio
-- **GameManager** ↔ **TimeManager** - Pause state coordinates with time scaling
+- **StateManager** ↔ **TimeManager** - Pause state coordinates with time scaling
 - **EventManager** - All managers can communicate through events
 
 ## Architecture
