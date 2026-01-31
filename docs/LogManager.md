@@ -32,6 +32,7 @@ The `LogManager` provides structured logging across the framework with:
 | `enable_file_logging` | bool | true | Whether to write logs to files |
 | `log_directory` | String | "user://logs" | Directory for log files |
 | `log_filename_pattern` | String | "{project}_{instance}.log" | Log filename template |
+| `emit_engine_warnings` | bool | true | Whether to emit WARN messages via push_warning() |
 
 ## Methods
 

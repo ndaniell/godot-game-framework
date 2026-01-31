@@ -40,7 +40,10 @@ signal menu_closed(menu_name: String)
 signal dialog_opened(dialog_name: String)
 signal dialog_closed(dialog_name: String)
 signal focus_changed(old_element: Control, new_element: Control)
+signal ui_ready
 ```
+
+Emitted when the UIManager is ready.
 
 ## Methods
 
@@ -48,6 +51,9 @@ signal focus_changed(old_element: Control, new_element: Control)
 
 #### `register_ui_element(name: String, element: Control, layer: int = -1) -> void`
 Register a UI element with the manager.
+
+#### `register_ui_scene(element_name: String, scene: PackedScene, z_layer: int = -1) -> Control`
+Register a UI element from a PackedScene. Returns the instantiated Control or null on error.
 
 #### `unregister_ui_element(name: String) -> void`
 Unregister a UI element.
@@ -58,14 +64,20 @@ Show a registered UI element.
 #### `hide_ui_element(name: String, fade_out: bool = false) -> void`
 Hide a registered UI element.
 
-#### `toggle_ui_element(name: String) -> void`
-Toggle UI element visibility.
-
 #### `get_ui_element(name: String) -> Control`
 Get a registered UI element.
 
 #### `is_ui_element_visible(name: String) -> bool`
 Check if a UI element is visible.
+
+#### `is_ready() -> bool`
+Check if the UIManager is ready.
+
+#### `get_overlay_container() -> Control`
+Get the overlay layer container.
+
+#### `get_layer_container(z_layer: int) -> Control`
+Get the container Control for a specific layer (z-index).
 
 ### Menu Management
 
@@ -114,6 +126,43 @@ Clear current focus.
 
 #### `get_current_focus() -> Control`
 Get the currently focused element.
+
+## Virtual Methods
+
+Override these methods to customize UIManager behavior:
+
+### `_on_ui_manager_ready() -> void`
+Called when UIManager is ready.
+
+### `_on_ui_element_registered(name: String, element: Control) -> void`
+Called when a UI element is registered.
+
+### `_on_ui_element_unregistered(name: String, element: Control) -> void`
+Called when a UI element is unregistered.
+
+### `_on_ui_element_shown(name: String, element: Control) -> void`
+Called when a UI element is shown.
+
+### `_on_ui_element_hidden(name: String, element: Control) -> void`
+Called when a UI element is hidden.
+
+### `_on_menu_opened(menu_name: String) -> void`
+Called when a menu is opened.
+
+### `_on_menu_closed(menu_name: String) -> void`
+Called when a menu is closed.
+
+### `_on_menu_focus_restored(menu_name: String) -> void`
+Called when focus is restored to a previous menu in the stack.
+
+### `_on_dialog_opened(dialog_name: String) -> void`
+Called when a dialog is opened.
+
+### `_on_dialog_closed(dialog_name: String) -> void`
+Called when a dialog is closed.
+
+### `_on_focus_changed(old_element: Control, new_element: Control) -> void`
+Called when focus changes between UI elements.
 
 ## Usage Examples
 

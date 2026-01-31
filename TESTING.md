@@ -212,8 +212,8 @@ func test_edge_cases() -> bool:
 The test framework can be integrated into CI/CD pipelines:
 
 ```bash
-# Run Godot headless and execute tests
-godot --headless --main-pack project.godot --quit --path . --scene "res://addons/godot_game_framework/tests/TestScene.tscn"
+# Run tests using the ggf script
+./ggf test
 ```
 
 ## Troubleshooting

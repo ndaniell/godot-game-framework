@@ -16,6 +16,7 @@ A comprehensive, extensible game framework for Godot 4.5+ that provides essentia
 - **UIManager** - UI elements, menus, dialogs, and focus management
 - **SettingsManager** - Graphics, audio, and gameplay settings
 - **EventManager** - Global event bus (pub/sub pattern)
+- **LogManager** - Structured logging and debugging utilities
 - **ResourceManager** - Resource loading, caching, and pooling
 - **PoolManager** - Object pooling for performance
 - **TimeManager** - Time scaling, timers, and day/night cycles
@@ -65,7 +66,7 @@ var bullet = pool_manager.spawn("bullets", position)
 All managers are designed to be extended. Override virtual methods to add custom behavior:
 
 ```gdscript
-extends AudioManager
+extends GGF_AudioManager
 
 func _on_music_started(stream: AudioStream) -> void:
     print("Now playing: ", stream.resource_path)
@@ -86,6 +87,7 @@ func _on_music_started(stream: AudioStream) -> void:
 ### System Managers
 
 - **[EventManager](docs/EventManager.md)** - Global event bus (pub/sub pattern)
+- **[LogManager](docs/LogManager.md)** - Structured logging and debugging utilities
 - **[SettingsManager](docs/SettingsManager.md)** - Graphics, audio, and gameplay settings
 - **[ResourceManager](docs/ResourceManager.md)** - Resource loading, caching, and pooling
 - **[PoolManager](docs/PoolManager.md)** - Object pooling for performance
@@ -143,7 +145,7 @@ All managers follow a consistent pattern:
 ### Example: Custom AudioManager
 
 ```gdscript
-extends AudioManager
+extends GGF_AudioManager
 
 func _on_music_started(stream: AudioStream) -> void:
     # Custom behavior when music starts

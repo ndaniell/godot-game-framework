@@ -55,7 +55,7 @@ signal notification_clicked(notification_id: String)
 
 ### Notification Display
 
-#### `show_notification(message: String, type: NotificationType = INFO, duration: float = -1.0, data: Dictionary = {}) -> String`
+#### `show_notification(message: String, type: NotificationType = NotificationType.INFO, duration: float = -1.0, data: Dictionary = {}) -> String`
 Show a notification and return its ID.
 
 #### `show_info(message: String, duration: float = -1.0, data: Dictionary = {}) -> String`

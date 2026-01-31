@@ -64,6 +64,13 @@ Check if an action was just released this frame.
 #### `get_action_strength(action: String) -> float`
 Get action strength (0.0-1.0) for analog inputs.
 
+#### `get_action_raw_strength(action: String, exact: bool = false) -> float`
+Get the raw strength of an action without deadzone processing.
+
+**Parameters:**
+- `action`: The action name
+- `exact`: If true, only considers the exact action (ignores similar actions)
+
 #### `get_action_vector(negative_x, positive_x, negative_y, positive_y, exact=false) -> Vector2`
 Get a 2D vector from four actions (useful for movement).
 

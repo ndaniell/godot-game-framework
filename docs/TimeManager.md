@@ -116,20 +116,41 @@ Check if it's nighttime.
 
 ### Time Information
 
-#### `get_game_time() -> float`
-Get total game time (scaled).
-
-#### `get_real_time() -> float`
-Get total real time.
-
-#### `get_delta_time() -> float`
-Get scaled delta time.
-
-#### `get_unscaled_delta_time() -> float`
-Get unscaled delta time.
-
 #### `format_time(seconds: float, include_milliseconds: bool = false) -> String`
 Format time as HH:MM:SS string.
+
+Note: To access time tracking values, use the public properties directly: `game_time`, `real_time`, `delta_time`, `unscaled_delta_time`.
+
+## Virtual Methods
+
+Override these methods to customize TimeManager behavior:
+
+### `_on_time_manager_ready() -> void`
+Called when TimeManager is ready.
+
+### `_on_time_scale_changed(old_scale: float, new_scale: float) -> void`
+Called when time scale changes.
+
+### `_on_timer_created(timer_id: String, duration: float, loop: bool) -> void`
+Called when a timer is created.
+
+### `_on_timer_completed(timer_id: String) -> void`
+Called when a timer completes. Default implementation handles special timers like "slow_motion_reset" and "fast_forward_reset".
+
+### `_on_timer_removed(timer_id: String) -> void`
+Called when a timer is removed.
+
+### `_on_timer_paused(timer_id: String) -> void`
+Called when a timer is paused.
+
+### `_on_timer_resumed(timer_id: String) -> void`
+Called when a timer is resumed.
+
+### `_on_timer_reset(timer_id: String) -> void`
+Called when a timer is reset.
+
+### `_on_day_night_changed(is_day_time: bool) -> void`
+Called when day/night state changes.
 
 ## Usage Examples
 
@@ -174,16 +195,16 @@ class_name PlaytimeTracker extends Node
 
 func get_playtime() -> String:
     var time_manager := GGF.get_manager(&"TimeManager")
-    return time_manager.format_time(time_manager.get_game_time())
+    return time_manager.format_time(time_manager.game_time)
 
 func get_session_time() -> String:
     var time_manager := GGF.get_manager(&"TimeManager")
-    return time_manager.format_time(time_manager.get_real_time())
+    return time_manager.format_time(time_manager.real_time)
 
 func save_playtime() -> void:
     var time_manager := GGF.get_manager(&"TimeManager")
     GGF.get_manager(&"SaveManager").save_game(save_slot, {
-        "playtime": time_manager.get_game_time(),
+        "playtime": time_manager.game_time,
         "formatted": get_playtime()
     })
 ```
@@ -271,17 +292,17 @@ var start_time: float = 0.0
 var running: bool = false
 
 func start_speedrun() -> void:
-    start_time = GGF.get_manager(&"TimeManager").get_game_time()
+    start_time = GGF.get_manager(&"TimeManager").game_time
     running = true
 
 func stop_speedrun() -> float:
     running = false
-    return GGF.get_manager(&"TimeManager").get_game_time() - start_time
+    return GGF.get_manager(&"TimeManager").game_time - start_time
 
 func _process(_delta: float) -> void:
     if running:
         var time_manager := GGF.get_manager(&"TimeManager")
-        var elapsed = time_manager.get_game_time() - start_time
+        var elapsed = time_manager.game_time - start_time
         time_label.text = time_manager.format_time(elapsed, true)
 ```
 

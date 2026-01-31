@@ -101,6 +101,30 @@ Override to customize fade transition.
 ### `_slide_transition(from_scene: String, to_scene: String) -> void`
 Override to customize slide transition.
 
+### `_on_scene_loaded(scene_path: String, scene_instance: Node) -> void`
+Called when a scene is loaded.
+
+### `_on_scene_unloaded(scene_path: String) -> void`
+Called when a scene is unloaded.
+
+### `_on_scene_preloaded(scene_path: String, packed_scene: PackedScene) -> void`
+Called when a scene is preloaded.
+
+### `_on_scene_unpreloaded(scene_path: String) -> void`
+Called when a preloaded scene is removed.
+
+### `_on_transition_started(from_scene: String, to_scene: String, transition_type: String) -> void`
+Called when a scene transition starts.
+
+### `_on_transition_completed(scene_path: String) -> void`
+Called when a scene transition completes.
+
+### `_on_all_scenes_cleared() -> void`
+Called when all loaded scenes are cleared.
+
+### `_on_all_preloaded_scenes_cleared() -> void`
+Called when all preloaded scenes are cleared.
+
 ## Usage Examples
 
 ### Basic Scene Changes

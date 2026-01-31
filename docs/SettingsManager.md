@@ -36,6 +36,11 @@ Features:
 | `vsync_mode` | VSyncMode | `ENABLED` | VSync mode |
 | `resolution` | Vector2i | (1920, 1080) | Window resolution |
 | `window_mode` | WindowMode | `WINDOWED` | Window mode |
+| `msaa_3d` | Viewport.MSAA | `MSAA_DISABLED` | 3D MSAA anti-aliasing |
+| `screen_space_aa` | Viewport.ScreenSpaceAA | `SCREEN_SPACE_AA_DISABLED` | Screen-space anti-aliasing |
+| `taa_enabled` | bool | false | Temporal anti-aliasing (TAA) |
+| `max_fps` | int | 0 | Maximum FPS limit (0 = unlimited) |
+| `render_scale` | float | 1.0 | 3D rendering scale (0.5-2.0) |
 
 ### Audio
 
@@ -44,6 +49,9 @@ Features:
 | `master_volume` | float | 0.0-1.0 | Master volume |
 | `music_volume` | float | 0.0-1.0 | Music volume |
 | `sfx_volume` | float | 0.0-1.0 | SFX volume |
+| `ui_volume` | float | 0.0-1.0 | UI sounds volume |
+| `voice_volume` | float | 0.0-1.0 | Voice/dialogue volume |
+| `mute_when_unfocused` | bool | false | Mute audio when window loses focus |
 
 ### Gameplay
 

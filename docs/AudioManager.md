@@ -30,6 +30,8 @@ The `AudioManager` is an extensible audio management system that provides:
 |----------|------|---------|-------------|
 | `music_bus_name` | String | "Music" | Name of the music audio bus |
 | `sfx_bus_name` | String | "SFX" | Name of the SFX audio bus |
+| `ui_bus_name` | String | "UI" | Name of the UI audio bus |
+| `voice_bus_name` | String | "Voice" | Name of the voice audio bus |
 | `master_bus_name` | String | "Master" | Name of the master audio bus |
 
 ### Volume Settings
@@ -39,6 +41,8 @@ The `AudioManager` is an extensible audio management system that provides:
 | `master_volume` | float | 0.0-1.0 | Master volume level |
 | `music_volume` | float | 0.0-1.0 | Music volume level |
 | `sfx_volume` | float | 0.0-1.0 | Sound effects volume level |
+| `ui_volume` | float | 0.0-1.0 | UI sounds volume level |
+| `voice_volume` | float | 0.0-1.0 | Voice/dialogue volume level |
 
 ## Signals
 
@@ -126,6 +130,14 @@ Sets the music volume (0.0-1.0).
 #### `set_sfx_volume(volume: float) -> void`
 
 Sets the sound effects volume (0.0-1.0).
+
+#### `set_ui_volume(volume: float) -> void`
+
+Sets the UI sounds volume (0.0-1.0).
+
+#### `set_voice_volume(volume: float) -> void`
+
+Sets the voice/dialogue volume (0.0-1.0).
 
 ## Virtual Methods
 

@@ -234,9 +234,7 @@ Each state is defined with:
 
 ```gdscript
 # GameStateDefinition.gd
-@export var state_name: String = ""
-@export var display_name: String = ""
-@export var allowed_transitions: Array[String] = []
+@export var name: String = ""
 @export var entry_callback: String = ""
 @export var exit_callback: String = ""
 ```
@@ -250,20 +248,14 @@ script = ExtResource("GameStateMachineConfig")
 default_state = "MENU"
 
 [sub_resource type="GameStateDefinition" id="state_menu"]
-state_name = "MENU"
-display_name = "Main Menu"
-allowed_transitions = ["PLAYING", "LOADING"]
+name = "MENU"
 entry_callback = "_on_menu_entered"
 
 [sub_resource type="GameStateDefinition" id="state_playing"]
-state_name = "PLAYING"
-display_name = "Playing"
-allowed_transitions = ["PAUSED", "GAME_OVER", "VICTORY", "LOADING"]
+name = "PLAYING"
 
 [sub_resource type="GameStateDefinition" id="state_paused"]
-state_name = "PAUSED"
-display_name = "Paused"
-allowed_transitions = ["PLAYING", "MENU"]
+name = "PAUSED"
 entry_callback = "_on_paused_entered"
 exit_callback = "_on_paused_exited"
 ```

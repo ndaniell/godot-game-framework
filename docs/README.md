@@ -29,6 +29,7 @@ Each manager has comprehensive documentation covering:
 ### System Managers
 
 - **[EventManager](EventManager.md)** - Global event bus (pub/sub pattern)
+- **[LogManager](LogManager.md)** - Structured logging and debugging utilities
 - **[NetworkManager](NetworkManager.md)** - Multiplayer networking (ENet)
 - **[SettingsManager](SettingsManager.md)** - Graphics, audio, and gameplay settings
 - **[ResourceManager](ResourceManager.md)** - Resource loading, caching, and pooling

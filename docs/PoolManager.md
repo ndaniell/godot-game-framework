@@ -101,6 +101,24 @@ Override to initialize object when added to pool.
 ### `_cleanup_object(obj: Node) -> void`
 Override to cleanup object when despawning.
 
+### `_on_pool_created(pool_name: String, size: int) -> void`
+Called when a pool is created.
+
+### `_on_pool_expanded(pool_name: String, count: int) -> void`
+Called when a pool is expanded.
+
+### `_on_pool_cleared(pool_name: String) -> void`
+Called when a pool is cleared.
+
+### `_on_pool_removed(pool_name: String) -> void`
+Called when a pool is removed.
+
+### `_on_object_spawned(pool_name: String, obj: Node) -> void`
+Called when an object is spawned from a pool.
+
+### `_on_object_despawned(pool_name: String, obj: Node) -> void`
+Called when an object is despawned back to the pool.
+
 ## Usage Examples
 
 ### Basic Bullet Pool

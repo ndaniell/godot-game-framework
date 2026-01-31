@@ -77,6 +77,23 @@ Convenience method to subscribe using an object and method name.
 GGF.events().subscribe_method("level_complete", self, "_on_level_complete")
 ```
 
+#### `subscribe_owned(event_name: String, owner: Node, method: String) -> void`
+
+Subscribe to an event with automatic cleanup when the owner node is freed. This prevents dangling references and memory leaks.
+
+**Parameters:**
+- `event_name`: Name of the event to listen for
+- `owner`: Node that owns this subscription (will auto-unsubscribe when freed)
+- `method`: Method name to call on the owner
+
+**Example:**
+```gdscript
+# In a player script
+func _ready() -> void:
+    GGF.events().subscribe_owned("enemy_spawned", self, "_on_enemy_spawned")
+    # Automatically unsubscribes when this node is freed
+```
+
 #### `unsubscribe(event_name: String, callable: Callable) -> void`
 
 Unsubscribe a callable from an event.

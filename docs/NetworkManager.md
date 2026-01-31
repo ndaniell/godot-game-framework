@@ -15,7 +15,7 @@ Provides multiplayer networking functionality using ENet, with support for hosti
 The `NetworkManager` handles ENet-based multiplayer networking including:
 
 - **Server hosting** with configurable port and max clients
-- **Client connections** with automatic reconnection handling
+- **Client connections** with connection status handling
 - **Peer management** with join/leave notifications
 - **Session events** for game-specific multiplayer communication
 - **Integration** with EventManager for cross-manager communication
@@ -87,7 +87,7 @@ Connect to a server.
 
 **Returns:** true if connection attempt started
 
-#### `disconnect() -> void`
+#### `disconnect_from_game() -> void`
 
 Disconnect from current session.
 
@@ -101,13 +101,9 @@ Check if currently connected to a network session.
 
 Check if this instance is the server/host.
 
-#### `get_peer_id() -> int`
+#### `get_server_peer_id() -> int`
 
-Get the current peer ID.
-
-#### `get_peer_ids() -> Array[int]`
-
-Get all connected peer IDs.
+Get the server peer ID. On the host, returns the host's unique ID. On ENet clients, returns 1 (server peer ID).
 
 ### Session Events
 
@@ -209,8 +205,7 @@ func _on_network_connected(mode: String) -> void:
 1. **Handle disconnections gracefully** - Always check connection status
 2. **Use session events for game logic** - Keep network-specific code separate
 3. **Validate server authority** - Only server should broadcast critical events
-4. **Implement reconnection logic** - Handle temporary disconnects
-5. **Test with multiple instances** - Use Godot's multiplayer testing features
+4. **Test with multiple instances** - Use Godot's multiplayer testing features
 
 ## See Also
 

@@ -87,6 +87,31 @@ Clear preloaded resources.
 #### `get_ref_count(resource_path: String) -> int`
 Get reference count for a resource.
 
+## Virtual Methods
+
+Override these methods to customize ResourceManager behavior:
+
+### `_on_resource_loaded(resource_path: String, resource: Resource) -> void`
+Called when a resource is loaded.
+
+### `_on_resource_loaded_from_cache(resource_path: String, resource: Resource) -> void`
+Called when a resource is retrieved from cache.
+
+### `_on_resource_unloaded(resource_path: String) -> void`
+Called when a resource is unloaded from cache.
+
+### `_on_resource_preloaded(resource_path: String, resource: Resource) -> void`
+Called when a resource is preloaded.
+
+### `_on_resource_unpreloaded(resource_path: String) -> void`
+Called when a preloaded resource is removed.
+
+### `_on_cache_cleared() -> void`
+Called when the cache is cleared.
+
+### `_on_unused_resources_unloaded(count: int) -> void`
+Called when unused resources are automatically unloaded.
+
 ## Usage Examples
 
 ### Basic Resource Loading
