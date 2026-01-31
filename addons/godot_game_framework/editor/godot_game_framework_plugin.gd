@@ -3,9 +3,12 @@ extends EditorPlugin
 
 const AUTOLOAD_NAME := "GGF"
 const GGF_BASE_SCRIPT := "res://addons/godot_game_framework/GGF.gd"
-const DEFAULT_STATES_CONFIG := "res://addons/godot_game_framework/resources/data/game_states.tres"
-const DEFAULT_SETTINGS_CONFIG := "res://addons/godot_game_framework/resources/data/ggf_settings_config_default.tres"
-const DEFAULT_UI_CONFIG := "res://addons/godot_game_framework/resources/ui/ggf_ui_config_default.tres"
+const _DEFAULT_DATA_DIR := "res://addons/godot_game_framework/resources/data"
+const _DEFAULT_UI_DIR := "res://addons/godot_game_framework/resources/ui"
+
+const DEFAULT_STATES_CONFIG := _DEFAULT_DATA_DIR + "/game_states.tres"
+const DEFAULT_SETTINGS_CONFIG := _DEFAULT_DATA_DIR + "/ggf_settings_config_default.tres"
+const DEFAULT_UI_CONFIG := _DEFAULT_UI_DIR + "/ggf_ui_config_default.tres"
 
 const PROJECT_CONFIG_PATH := "res://ggf_project_config.tres"
 
@@ -106,7 +109,7 @@ func _ensure_dir_exists(dir_path: String) -> bool:
 
 func _get_bootstrapper_source() -> String:
 	return (
-		"extends \"res://addons/godot_game_framework/GGF.gd\"\n"
+		'extends "res://addons/godot_game_framework/GGF.gd"\n'
 		+ "\n"
 		+ "## Project bootstrapper for Godot Game Framework (GGF).\n"
 		+ "##\n"
@@ -122,9 +125,9 @@ func _ensure_project_config_resource() -> void:
 		return
 
 	# Load scripts directly (avoid reliance on global class_name scanning order).
-	var project_config_script := load(
-		"res://addons/godot_game_framework/core/types/GGFProjectConfig.gd"
-	) as Script
+	var project_config_script := (
+		load("res://addons/godot_game_framework/core/types/GGFProjectConfig.gd") as Script
+	)
 	if project_config_script == null:
 		push_warning("GGF: Failed to load GGFProjectConfig script")
 		return
