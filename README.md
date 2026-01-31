@@ -36,13 +36,16 @@ A comprehensive, extensible game framework for Godot 4.5+ that provides essentia
 ### As an addon (recommended)
 
 1. Copy `addons/godot_game_framework/` into your project’s `addons/` folder
-2. (Optional) In Godot: **Project → Project Settings → Plugins** → enable **Godot Game Framework**
-3. Add a project autoload named `GGF` (the plugin **does not** create autoloads)
-   - **Project → Project Settings → Autoload**
-   - Path: your bootstrapper script that extends the framework base:
+2. In Godot: **Project → Project Settings → Plugins** → enable **Godot Game Framework**
+3. The plugin will automatically “install” the framework into your project by:
+   - Creating a bootstrapper script at `res://ggf/GGF.gd` (fallback: `res://GGF.gd`) if missing
+   - Registering an autoload named `GGF` pointing to that bootstrapper (or leaving your existing `GGF` autoload alone)
+   - Creating `res://ggf_project_config.tres` pointing at the addon defaults (optional, only if missing)
+
+If you want to customize the framework, edit the generated bootstrapper so it extends the framework base:
 
 ```gdscript
-# res://src/GGF.gd
+# res://ggf/GGF.gd (generated)
 extends "res://addons/godot_game_framework/GGF.gd"
 ```
 

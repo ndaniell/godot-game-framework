@@ -9,7 +9,7 @@ Reusable managers and systems for Godot **4.5+**.
 
 ## Use
 
-The framework registers `GGF` as an autoload.
+Enabling the plugin registers `GGF` as an autoload (and creates a simple bootstrapper script if needed).
 
 Prefer the built-in manager accessors when they exist:
 
