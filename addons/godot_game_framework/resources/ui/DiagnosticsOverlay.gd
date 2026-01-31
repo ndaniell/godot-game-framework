@@ -55,10 +55,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 
 		# Persist the toggle via SettingsManager so the state survives restarts.
-		var settings := GGF.get_manager(&"SettingsManager")
+		var settings := GGF.settings()
 		if settings != null:
-			var current_enabled := bool(settings.get("diagnostics_overlay_enabled"))
-			settings.set("diagnostics_overlay_enabled", not current_enabled)
+			settings.diagnostics_overlay_enabled = not settings.diagnostics_overlay_enabled
 		else:
 			visible = not visible
 

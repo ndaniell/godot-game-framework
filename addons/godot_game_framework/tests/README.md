@@ -14,7 +14,7 @@ This directory contains a lightweight test harness for the Godot Game Framework 
 1. Open the project in Godot 4.5+
 2. Run `res://addons/godot_game_framework/tests/TestScene.tscn`
 
-## Running tests programmatically (same entry point as scripts)
+## Running tests programmatically
 
 Use the CLI entrypoint script (boots `GGF`, adds `TestRunner`, exits with CI-friendly code):
 
